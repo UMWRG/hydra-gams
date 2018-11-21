@@ -1,0 +1,6 @@
+Name  , X               , Y               , Type,  maxStor, minStor, BC           , IC           , S   , infeasQ, Description
+Units ,                 ,                 ,     ,    hm^3 ,   hm^3 ,              ,              , hm^3,        ,
+SR1   , 507046.845211248, 169181.147656871, sr  ,   500.0 ,   50.0 , TS/BC.csv, TS/IC.csv, NULL, NULL   ,
+SR2   , 507076.010100673, 159136.791289709, sr  ,   200.0 ,   20.0 , TS/BC.csv, TS/IC.csv, NULL, NULL   ,
+SR3   , 495097.226875602, 158933.761065556, sr  ,   300.0 ,   30.0 , TS/BC.csv, TS/IC.csv, NULL, NULL   ,
+SR4   , 501188.133600215, 151827.703220175, sr  ,   600.0 ,   60.0 , TS/BC.csv, TS/IC.csv, NULL, NULL   ,

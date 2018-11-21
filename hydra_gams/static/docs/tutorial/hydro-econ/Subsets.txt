@@ -1,0 +1,16 @@
+* Define further subsets to simplify model formulation equations
+*        in this case the subsets are aggregations of subsets of i (nodes)
+
+Sets
+         stor(i) storage nodes (e.g. reservoirs. aquifers or large desal sources)
+         managedstor(i) managed storage nodes (reservoirs and aquifers but not desal)
+         nonstor(i) non storage nodes (e.g. junctions. demand nodes. etc.)
+         dem(i) demand nodes (e.g. urban and agricultural demands) ;
+
+         stor(i) = sr(i) + gw(i) + desal(i);
+         managedstor(i) = sr(i) + gw(i);
+
+*        subset contains all nonstorage nodes
+         nonstor(i) = not stor(i) ;
+
+         dem(i) = ur(i) + ag(i) ;

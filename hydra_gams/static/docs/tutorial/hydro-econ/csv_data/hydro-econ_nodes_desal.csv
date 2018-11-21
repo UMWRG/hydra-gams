@@ -1,0 +1,3 @@
+Name  , X               , Y               , Type,  maxStor  , minStor,       IC, S   , infeasQ, Description
+Units ,                 ,                 ,     ,       hm^3 ,   hm^3 ,         , hm^3,        ,
+Desal1, 519122.470067129, 148443.866150946, desal,  100000.0 ,    0.0 , 10000.0 , NULL, NULL   ,

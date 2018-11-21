@@ -1,0 +1,45 @@
+* Define parameters aggregating from different subsets to simplify model equations
+Parameter netInflows(t,i) inflow parameter  ;
+
+         netInflows(t,gw) =  gw_timeseries_data(t,gw,"BC") ;
+         netInflows(t,sr) =  sr_timeseries_data(t,sr,"BC") ;
+         netInflows(t,ag) =  ag_timeseries_data(t,ag,"BC") ;
+         netInflows(t,jn) =  jn_scalar_data(jn,"BC") ;
+
+Parameter initStor(t,i) initial storage parameter  ;
+
+         initStor(t,gw) =  gw_timeseries_data(t,gw,"IC") ;
+         initStor(t,sr) =  sr_timeseries_data(t,sr,"IC") ;
+         initStor(t,desal) = desal_scalar_data(desal,"IC") ;
+
+Parameter consum(i) consumptive fraction      ;
+
+         consum(ur) = ur_scalar_data(ur,"Consumption") ;
+         consum(ag) = ag_scalar_data(ag,"Consumption") ;
+
+Parameter lossCoeff(i,j) link loss coefficient ;
+
+         lossCoeff(i,j) = defLink_scalar_data(i,j,"lossCoeff")
+                         + costLink_scalar_data(i,j,"lossCoeff") ;
+
+Parameter maxFlows(i,j) parameter with all max flows ;
+
+         maxFlows(i,j) = defLink_scalar_data(i,j,"maxFlow")
+                         + costLink_scalar_data(i,j,"maxFlow") ;
+
+Parameter minFlows(i,j) parameter with all min flows ;
+
+         minFlows(i,j) = defLink_scalar_data(i,j,"minFlow")
+                         + costLink_scalar_data(i,j,"minFlow") ;
+
+Parameter maxStor(i) parameter with max storage levels of all storage nodes ;
+
+         maxStor(sr) = sr_scalar_data(sr,"maxStor") ;
+         maxStor(gw) = gw_scalar_data(gw,"maxStor") ;
+         maxStor(desal) = desal_scalar_data(desal,"maxStor") ;
+
+Parameter minStor(i) parameter with min storage levels of all storage nodes ;
+
+         minStor(sr) = sr_scalar_data(sr,"minStor") ;
+         minStor(gw) = gw_scalar_data(gw,"minStor") ;
+         minStor(desal) = desal_scalar_data(desal,"minStor") ;

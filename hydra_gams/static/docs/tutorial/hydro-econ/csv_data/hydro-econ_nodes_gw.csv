@@ -1,0 +1,4 @@
+Name  , X               , Y               , Type,  maxStor, minStor, BC           , IC           , S   , infeasQ, Description
+Units ,                 ,                 ,     ,    hm^3 ,   hm^3 ,              ,              , hm^3,        ,
+GW1   , 518039.642204975, 165430.728238476, gw  ,  2000.0 ,  300.0 , TS/BC.csv    , TS/IC.csv    , NULL, NULL   ,
+GW2   , 490359.854978682, 146819.624357716, gw  ,  2000.0 ,  300.0 , TS/BC.csv    , TS/IC.csv    , NULL, NULL   ,

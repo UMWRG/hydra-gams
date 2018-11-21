@@ -1,0 +1,33 @@
+{
+    "_meta": {
+        "hash": {
+            "sha256": "0185442a2683e7757acceeb6d1e80af7abcc2e04adf4a57756258daa7ca056df"
+        },
+        "pipfile-spec": 6,
+        "requires": {
+            "python_version": "3.6"
+        },
+        "sources": [
+            {
+                "name": "pypi",
+                "url": "https://pypi.org/simple",
+                "verify_ssl": true
+            }
+        ]
+    },
+    "default": {
+        "hydra-base": {
+            "git": "https://github.com/hydraplatform/hydra-base.git",
+            "ref": "729584395813b2ad16ead3832dfbce966c601585"
+        },
+        "hydra-client-python": {
+            "git": "https://github.com/hydraplatform/hydra-client-python.git",
+            "ref": "0487a737a55f270281478511a0c24f56e828741f"
+        },
+        "hydra-gams": {
+            "git": "https://github.com/UMWRG/gams-app.git",
+            "ref": "a8c788bbeed79ed4f1c99b4b9d1b62189248e740"
+        }
+    },
+    "develop": {}
+}

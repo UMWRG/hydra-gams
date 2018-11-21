@@ -1,0 +1,4 @@
+Name       , Type , Description
+Units      ,      ,
+storage    , group, Nodes that feature a storage
+no_storage , group, Nodes that don't feature a storage

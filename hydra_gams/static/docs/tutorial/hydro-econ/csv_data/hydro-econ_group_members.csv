@@ -1,0 +1,29 @@
+Name       , Type, Member
+stor       , Node, GW1
+stor       , Node, GW2
+stor       , Node, SR1
+stor       , Node, SR2
+stor       , Node, SR3
+stor       , Node, SR4
+stor       , Node, Desal1
+nonstor    , Node, Ag1
+nonstor    , Node, Ag2
+nonstor    , Node, EndPt
+nonstor    , Node, Hp1
+nonstor    , Node, J1
+nonstor    , Node, J2
+nonstor    , Node, J3
+nonstor    , Node, Urb1
+nonstor    , Node, Urb2 
+nonstor    , Node, WWTP1 
+managedstor, Node, SR1
+managedstor, Node, SR2
+managedstor, Node, SR3
+managedstor, Node, SR4
+managedstor, Node, GW1
+managedstor, Node, GW2
+dem        , Node, Ag1
+dem        , Node, Ag2
+dem        , Node, EndPt
+dem        , Node, Urb1
+dem        , Node, Urb2 

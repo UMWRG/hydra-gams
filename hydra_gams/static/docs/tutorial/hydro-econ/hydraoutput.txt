@@ -1,0 +1,502 @@
+* Data exported from Hydra using GAMSplugin.
+* (c) Copyright 2013, 2014, University of Manchester
+*
+* hydro-econ: Hydro-econ example network.
+* Network-ID:  2
+* Scenario-ID: 2
+*******************************************************************************
+
+* Network definition
+
+SETS
+
+i vector of all nodes /
+Desal1
+WWTP1
+Hp1
+J1
+J2
+J3
+SR2
+SR3
+SR1
+GW1
+EndPt
+SR4
+GW2
+Urb2
+Urb1
+Ag2
+Ag1
+    /
+
+Alias(i,j)
+
+* Node types
+
+SETS
+
+desal(i) /
+Desal1
+/
+
+WWTP(i) /
+WWTP1
+/
+
+hp(i) /
+Hp1
+/
+
+jn(i) /
+J1
+J2
+J3
+/
+
+sr(i) /
+SR2
+SR3
+SR1
+SR4
+/
+
+gw(i) /
+GW1
+GW2
+/
+
+ag(i) /
+EndPt
+Ag2
+Ag1
+/
+
+ur(i) /
+Urb2
+Urb1
+/
+
+* Node groups
+
+node_groups vector of all node groups /
+managedstor
+nonstor
+dem
+stor
+/
+
+managedstor(i) /
+SR2
+SR3
+SR1
+GW1
+SR4
+GW2
+/
+
+nonstor(i) /
+WWTP1
+Hp1
+J1
+J2
+J3
+EndPt
+Urb2
+Urb1
+Ag2
+Ag1
+/
+
+dem(i) /
+EndPt
+Urb2
+Urb1
+Ag2
+Ag1
+/
+
+stor(i) /
+Desal1
+SR2
+SR3
+SR1
+SR4
+GW2
+/
+
+SETS
+
+links(i,j) vector of all links /
+SR2 . SR4
+SR1 . J1
+J1 . SR2
+GW2 . Ag2
+GW2 . Ag1
+Ag1 . J2
+WWTP1 . J2
+Urb1 . J1
+Ag2 . GW2
+Desal1 . Urb2
+SR4 . Ag1
+WWTP1 . Urb2
+Hp1 . SR4
+Urb2 . WWTP1
+J2 . J3
+SR4 . J2
+Ag1 . GW2
+SR3 . Hp1
+J2 . Ag2
+Urb1 . GW1
+SR4 . Urb2
+GW1 . Urb1
+Ag2 . J3
+J3 . EndPt
+SR1 . Urb1
+    /
+
+* Link types
+
+defLink(i,j) /
+SR2 . SR4
+SR1 . J1
+J1 . SR2
+Ag1 . J2
+Urb1 . J1
+Ag2 . GW2
+SR4 . Ag1
+Hp1 . SR4
+Urb2 . WWTP1
+J2 . J3
+SR4 . J2
+Ag1 . GW2
+SR3 . Hp1
+J2 . Ag2
+Urb1 . GW1
+SR4 . Urb2
+Ag2 . J3
+J3 . EndPt
+SR1 . Urb1
+/
+
+costLink(i,j) /
+GW2 . Ag2
+GW2 . Ag1
+WWTP1 . J2
+Desal1 . Urb2
+WWTP1 . Urb2
+GW1 . Urb1
+/
+
+* Connectivity matrix.
+Table Connect(i,j)
+              Desal1     WWTP1       Hp1        J1        J2        J3       SR2       SR3       SR1       GW1     EndPt       SR4       GW2      Urb2      Urb1       Ag2       Ag1
+    Desal1         0         0         0         0         0         0         0         0         0         0         0         0         0         1         0         0         0
+
+     WWTP1         0         0         0         0         1         0         0         0         0         0         0         0         0         1         0         0         0
+
+       Hp1         0         0         0         0         0         0         0         0         0         0         0         1         0         0         0         0         0
+
+        J1         0         0         0         0         0         0         1         0         0         0         0         0         0         0         0         0         0
+
+        J2         0         0         0         0         0         1         0         0         0         0         0         0         0         0         0         1         0
+
+        J3         0         0         0         0         0         0         0         0         0         0         1         0         0         0         0         0         0
+
+       SR2         0         0         0         0         0         0         0         0         0         0         0         1         0         0         0         0         0
+
+       SR3         0         0         1         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+
+       SR1         0         0         0         1         0         0         0         0         0         0         0         0         0         0         1         0         0
+
+       GW1         0         0         0         0         0         0         0         0         0         0         0         0         0         0         1         0         0
+
+     EndPt         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+
+       SR4         0         0         0         0         1         0         0         0         0         0         0         0         0         1         0         0         1
+
+       GW2         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0         1         1
+
+      Urb2         0         1         0         0         0         0         0         0         0         0         0         0         0         0         0         0         0
+
+      Urb1         0         0         0         1         0         0         0         0         0         1         0         0         0         0         0         0         0
+
+       Ag2         0         0         0         0         0         1         0         0         0         0         0         0         1         0         0         0         0
+
+       Ag1         0         0         0         0         1         0         0         0         0         0         0         0         1         0         0         0         0
+
+SETS
+
+* Time index
+t time index /
+0
+1
+2
+3
+4
+5
+/
+
+* define time steps dependent on time index (t)
+
+Parameter timestamp(t) ;
+
+    timestamp("0") = 730851.0 ;
+    timestamp("1") = 730882.0 ;
+    timestamp("2") = 730910.0 ;
+    timestamp("3") = 730941.0 ;
+    timestamp("4") = 730971.0 ;
+    timestamp("5") = 731002.0 ;
+
+
+* Node data
+
+* Data for node type desal
+
+SETS
+
+desal_scalars /
+maxStor
+minStor
+IC
+/
+
+Table desal_scalar_data(i,desal_scalars) 
+
+                                maxStor        minStor             IC
+Desal1                         100000.0            0.0        10000.0
+
+
+* Data for node type WWTP
+
+SETS
+
+WWTP_scalars /
+Cost
+/
+
+Table WWTP_scalar_data(i,WWTP_scalars) 
+
+                                   Cost
+WWTP1                               8.0
+
+
+* Data for node type hp
+
+* Data for node type jn
+
+SETS
+
+jn_scalars /
+BC
+/
+
+Table jn_scalar_data(i,jn_scalars) 
+
+                                     BC
+J1                                  0.0
+J2                                  0.0
+J3                                  0.0
+
+
+* Data for node type sr
+
+SETS
+
+sr_scalars /
+maxStor
+minStor
+/
+
+Table sr_scalar_data(i,sr_scalars) 
+
+                                maxStor        minStor
+SR2                               200.0           20.0
+SR3                               300.0           30.0
+SR1                               500.0           50.0
+SR4                               600.0           60.0
+
+
+SETS
+
+sr_timeseries /
+BC
+IC
+/
+
+Table sr_timeseries_data(t,i,sr_timeseries) 
+
+                SR2.BC         SR3.BC         SR1.BC         SR4.BC         SR2.IC         SR3.IC         SR1.IC         SR4.IC
+0            85.000000      84.000000      96.000000      87.000000      38.000000     101.000000     157.000000     218.000000
+1            85.000000      84.000000      96.000000      87.000000      38.000000     101.000000     157.000000     218.000000
+2            85.000000      84.000000      96.000000      87.000000      38.000000     101.000000     157.000000     218.000000
+3            85.000000      84.000000      96.000000      87.000000      38.000000     101.000000     157.000000     218.000000
+4            85.000000      84.000000      96.000000      87.000000      38.000000     101.000000     157.000000     218.000000
+5            85.000000      84.000000      96.000000      87.000000      38.000000     101.000000     157.000000     218.000000
+
+* Data for node type gw
+
+SETS
+
+gw_scalars /
+maxStor
+minStor
+/
+
+Table gw_scalar_data(i,gw_scalars) 
+
+                                maxStor        minStor
+GW1                              2000.0          300.0
+GW2                              2000.0          300.0
+
+
+SETS
+
+gw_timeseries /
+BC
+IC
+/
+
+Table gw_timeseries_data(t,i,gw_timeseries) 
+
+                GW1.BC         GW2.BC         GW1.IC         GW2.IC
+0            62.900002      24.400000    1000.000000    1000.000000
+1            62.900002      24.400000    1000.000000    1000.000000
+2            62.900002      24.400000    1000.000000    1000.000000
+3            62.900002      24.400000    1000.000000    1000.000000
+4            62.900002      24.400000    1000.000000    1000.000000
+5            62.900002      24.400000    1000.000000    1000.000000
+
+* Data for node type ag
+
+SETS
+
+ag_scalars /
+Consumption
+/
+
+Table ag_scalar_data(i,ag_scalars) 
+
+                            Consumption
+EndPt                               1.0
+Ag2                                 0.7
+Ag1                                 0.7
+
+
+SETS
+
+ag_timeseries /
+linCoeff
+quadCoeff
+BC
+/
+
+Table ag_timeseries_data(t,i,ag_timeseries) 
+
+          Ag2.linCoeff   Ag1.linCoeff  Ag2.quadCoeff  Ag1.quadCoeff         Ag1.BC
+0          1300.000000    1200.000000      -7.000000      -8.000000      36.900002
+1          1300.000000    1200.000000      -7.000000      -8.000000      36.900002
+2          1300.000000    1200.000000      -7.000000      -8.000000      36.900002
+3          1300.000000    1200.000000      -7.000000      -8.000000      36.900002
+4          1300.000000    1200.000000      -7.000000      -8.000000      36.900002
+5          1300.000000    1200.000000      -7.000000      -8.000000      36.900002
+
+* Array test_array for node EndPt, dimensions are [3, 3]
+
+SETS
+
+a_EndPt_test_array array index /
+0
+1
+2
+/
+
+b_EndPt_test_array array index /
+0
+1
+2
+/
+
+Table EndPt_test_array(a_EndPt_test_array,b_EndPt_test_array) 
+
+                   0                   1                   2
+0                1.00                2.00                3.0
+1                4.01                5.01                6.0
+2                7.02                8.02                9.0
+
+
+* Data for node type ur
+
+SETS
+
+ur_scalars /
+linCoeff
+quadCoeff
+Consumption
+/
+
+Table ur_scalar_data(i,ur_scalars) 
+
+                               linCoeff      quadCoeff    Consumption
+Urb2                             2500.0           -7.0            0.5
+Urb1                             1500.0           -5.0            0.5
+
+
+* Link data
+
+* Data for link type defLink
+
+SETS
+
+defLink_scalars /
+lossCoeff
+maxFlow
+minFlow
+/
+
+Table defLink_scalar_data(i,j,defLink_scalars) 
+
+                              lossCoeff        maxFlow        minFlow
+SR2 . SR4                           1.0          100.0           10.0
+SR1 . J1                            1.0          100.0           10.0
+J1 . SR2                            1.0          100.0           10.0
+Ag1 . J2                           0.95          100.0            0.0
+Urb1 . J1                           1.0          100.0            0.0
+Ag2 . GW2                           1.0          100.0            0.0
+SR4 . Ag1                          0.95          100.0            1.0
+Hp1 . SR4                           1.0          100.0           10.0
+Urb2 . WWTP1                        1.0          100.0            0.0
+J2 . J3                             0.9          200.0           10.0
+SR4 . J2                           0.95          200.0           10.0
+Ag1 . GW2                           1.0          100.0            0.0
+SR3 . Hp1                           1.0          100.0           10.0
+J2 . Ag2                            1.0          100.0            0.0
+Urb1 . GW1                          1.0          100.0            0.0
+SR4 . Urb2                          1.0          100.0           10.0
+Ag2 . J3                            1.0          100.0            0.0
+J3 . EndPt                          1.0          350.0          175.0
+SR1 . Urb1                          1.0          100.0           10.0
+
+
+* Data for link type costLink
+
+SETS
+
+costLink_scalars /
+Cost
+minFlow
+maxFlow
+lossCoeff
+/
+
+Table costLink_scalar_data(i,j,costLink_scalars) 
+
+                                   Cost        minFlow        maxFlow      lossCoeff
+GW2 . Ag2                          15.0            0.0           80.0            1.0
+GW2 . Ag1                          15.0            0.0           80.0            1.0
+WWTP1 . J2                         20.0            0.0           80.0            1.0
+Desal1 . Urb2                      60.0            0.0           80.0            1.0
+WWTP1 . Urb2                       50.0            0.0           80.0            1.0
+GW1 . Urb1                         10.0            0.0           80.0            1.0
+
+

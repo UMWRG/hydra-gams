@@ -1,0 +1,8 @@
+Name    , X                , Y                , Type              , min_stor        , max_stor        , init_stor , S       , delivery       , consumption_coeff , Description
+Units   ,                  ,                  ,                   , 1e6 m^3         , 1e6 m^3         , 1e6 m^3   , 1e6 m^3 , 1e6 m^3 mon^-1 , -                 ,
+J1      , 507143.686842058 , 164415.577117707 , junction          ,                 ,                 ,           ,         ,                ,                   ,
+Urb1    , 515264.895808208 , 169559.009462935 , demand            ,                 ,                 ,           ,         , NULL           , 1                 ,
+Ag1     , 494488.136203141 , 148849.926599253 , demand            ,                 ,                 ,           ,         , NULL           , 1                 ,
+EndPt   , 501129.818489039 , 140506.889165248 , junction          ,                 ,                 ,           ,         ,                ,                   ,
+StartPt , 490359.854978682 , 146819.624357716 , junction          ,                 ,                 ,           ,         ,                ,                   ,
+SR1     , 507046.845211248 , 169181.147656871 , surface_reservoir , TS/min_stor.csv , TS/max_stor.csv , 500       , NULL    ,                ,                   ,

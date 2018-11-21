@@ -1,0 +1,157 @@
+* Network topology defenition
+
+SETS
+i vector of all nodes /
+J1
+Urb1
+Ag1
+EndPt
+StartPt
+SR1
+/
+
+Alias(i,j)
+
+* Node types
+
+SETS
+
+jn(i) /
+J1
+StartPt
+EndPt
+/
+
+sr(i) /
+SR1
+/
+
+ag(i) /
+Ag1
+/
+
+ur(i) /
+Urb1
+/
+
+* Node groups
+
+SETS
+mb_ns_nodes(i) non-storage nodes where mass balance constraint should be satisfied /
+J1
+Urb1
+Ag1
+/
+
+SETS
+mb_s_nodes(i) storage nodes where storage mass balance constraint should be satisfied /
+SR1
+/
+
+SETS
+dem_nodes(i) demand nodes /
+Ag1
+Urb1
+/
+
+SETS
+links(i,j) vector of all links /
+StartPt.SR1
+SR1.J1
+SR1.Ag1
+J1.Urb1
+J1.EndPt
+/
+
+* Connectivity matrix
+
+Table Connect(i,j)
+        J1        Urb1        Ag1          EndPt      StartPt       SR1
+J1      0         1           0              1          0           0 
+Urb1    0         0           0              0          0           0
+Ag1     0         0           0              0          0           0 
+EndPt   0         0           0              0          0           0 
+StartPt 0         0           0              0          0           1
+SR1     1         0           1              0          0           0
+
+* Time index
+
+SETS
+
+t time index /0*6/
+
+
+* define time steps dependent on time index (t)
+
+Parameter timestamp(t) ;
+
+    timestamp("0") = 730120.0 ;
+    timestamp("1") = 730151.0 ;
+    timestamp("2") = 730180.0 ;
+    timestamp("3") = 730211.0 ;
+    timestamp("4") = 730241.0 ;
+    timestamp("5") = 730272.0 ;
+    timestamp("6") = 730302.0 ;
+
+
+* Nodes data
+
+Table initStor (mb_s_nodes,t)
+               1
+SR1            500
+
+* Consumption coefficient
+
+Parameter cc(i);
+   cc("Ag1")=1;
+   cc("Urb1")=1;
+
+Table cost(i,j,t)
+
+                1    2    3     4      5      6 
+StartPt.SR1     10   8    12    10     10     11
+SR1.J1          15   10   14    13     15     15
+SR1.Ag1         10   5    6     10     5      10
+J1.Urb1         25   31   29    30     24     26
+J1.EndPt        10   7    9     8      9      9 
+
+Table flowmultiplier(i,j,t)
+
+                             1     2     3    4    5    6
+StartPt.SR1                  1     0.9   1    0.9  1    1
+SR1.J1                       1     0.9   1    0.95 1    1
+SR1.Ag1                      1     1     1    1    1    1
+J1.Urb1                      0.95  0.85  0.9  0.85 0.9  1
+J1.EndPt                     1     1     1    1    1    1
+
+
+Table lower(i,j,t)
+
+                              1     2     3    4     5    6 
+StartPt.SR1                   10    10    10   10    10   10
+SR1.J1                        10    10    10   10    10   10
+SR1.Ag1                       10    15    10   10    10   15
+J1.Urb1                       10    10    10   10    10   10
+J1.EndPt                      10    10    10   10    10   10
+
+Table upper(i,j,t)
+
+
+                              1     2     3     4     5     6
+StartPt.SR1                   520   500   520   510   500   500
+SR1.J1                        310   300   300   300   310   300
+SR1.Ag1                       90    100   110   100   90    100
+J1.Urb1                       220   250   200   230   240   250
+J1.EndPt                      30    40    20    30    30    10
+
+Table storagelower(mb_s_nodes,t)
+
+
+                              1      2      3      4      5      6 
+SR1                           10     10     10     10     10     10
+
+Table storageupper(mb_s_nodes,t)
+
+
+                              1      2      3      4      5      6
+SR1                           500    500    500    500    500    500

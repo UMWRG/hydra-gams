@@ -1,0 +1,5 @@
+Name  , X               , Y               , Type,  Consumption, linCoeff           , quadCoeff           ,        BC , agBenefits, delivery, infeasQ, Description
+Units ,                 ,                 ,     ,             ,                    ,                     ,           ,           ,         ,        ,
+Ag1   , 494488.136203141, 148849.926599253, ag  ,  0.7        , TS/ag_linCoeff.csv, TS/ag_quadCoeff.csv  , TS/BC.csv , NULL      , NULL    , NULL   ,
+Ag2   , 494352.782720372, 144315.584926486, ag  ,  0.7        , TS/ag_linCoeff.csv, TS/ag_quadCoeff.csv  ,           , NULL      , NULL    , NULL   ,
+EndPt , 501129.818489039, 140506.889165248, ag  ,  1.0        ,                    ,                     ,           , NULL      , NULL    , NULL   ,

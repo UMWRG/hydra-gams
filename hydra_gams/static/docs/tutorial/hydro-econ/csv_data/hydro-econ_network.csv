@@ -1,0 +1,4 @@
+# Hydro-econ network converted from a hydroplatform project.
+ID   , Name      , Type, infeasCost, urTotalBenefits, agTotalBenefits, totalCost, totalNetBenefits, Description
+Units,           ,     ,         $ ,              $ ,              $ ,        $ ,               $ ,
+    , hydro-econ , hydro-econ, NULL      , NULL           , NULL           , NULL     , NULL            , Hydro-econ example network.

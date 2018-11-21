@@ -1,0 +1,3 @@
+Name  , X               , Y               , Type,  Cost, infeasQ, Description
+Units ,                 ,                 ,     ,    $ ,        ,
+WWTP1 , 508767.928635288, 149391.34053033 , WWTP,  8.0 , NULL   ,

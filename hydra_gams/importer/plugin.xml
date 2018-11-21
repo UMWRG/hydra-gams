@@ -1,0 +1,76 @@
+<plugin_info>
+    <plugin_name>Import from GAMS</plugin_name>
+    <plugin_dir>GAMSImport.bat</plugin_dir>
+    <plugin_description>
+        Import a gdx results file into Hydra.
+	</plugin_description>
+    <plugin_category>import</plugin_category>
+    <plugin_command>GAMSImport.py</plugin_command>
+    <plugin_shell>python</plugin_shell>
+    <plugin_location>.</plugin_location>
+	<smallicon>gams_import16.png</smallicon>
+    <largeicon>gams_import.png</largeicon>
+    <plugin_epilog>For more information visit hydra platform website</plugin_epilog>
+	<mandatory_args>
+        <arg>
+            <name>network</name>
+            <switch>-t</switch>
+            <multiple>N</multiple>
+            <allownew>N</allownew>
+            <argtype>network</argtype>
+            <help>ID of the network where results will be imported to. This coincides with the network exported to GAMS..</help>
+        </arg>
+        <arg>
+            <name>scenario</name>
+            <switch>-s</switch>
+            <multiple>N</multiple>
+            <allownew>N</allownew>
+            <argtype>scenario</argtype>
+            <help> ID of the underlying scenario used for the most recent simulation run.</help>
+        </arg>
+		<arg>
+            <name>gdx-file</name>
+            <switch>-f</switch>
+            <multiple>N</multiple>
+            <allownew>N</allownew>
+            <argtype>file</argtype>
+            <help>GDX file containing GAMS results, required only at import mode</help>
+        </arg>
+        <arg>
+            <name>gams-model</name>
+            <switch>-m</switch>
+            <multiple>N</multiple>
+            <allownew>N</allownew>
+            <argtype>file</argtype>
+            <help>Full path to the GAMS model (*.gms) used for the simulation.</help>
+        </arg>
+    </mandatory_args>
+   <non_mandatory_args>
+        <arg>
+            <name>gams-path</name>
+            <switch>-G</switch>
+            <multiple>N</multiple>
+            <allownew>N</allownew>
+            <argtype>file</argtype>
+            <help>File path of the GAMS installation (the folder containing gams.exe or equivalent). This is only necessary if gams is installed in a non-standard location.</help>
+        </arg>
+        <arg>
+            <name>server_url</name>
+            <switch>-u</switch>
+            <multiple>N</multiple>
+            <argtype>string</argtype>
+            <help>Specify the URL of the server to which this
+                        plug-in connects.</help>
+        </arg>
+        <arg>
+            <name>session_id</name>
+            <switch>-c</switch>
+            <multiple>N</multiple>
+            <argtype>string</argtype>
+            <help>Specify the session ID for the connection. If not specified,
+            the plugin will try to connect based on the credentials it finds in config</help>
+        </arg>
+    </non_mandatory_args>
+    <switches>
+    </switches>
+ </plugin_info>
