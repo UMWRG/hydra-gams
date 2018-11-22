@@ -26,7 +26,7 @@
         },
         "hydra-gams": {
             "git": "https://github.com/UMWRG/hydra-gams.git",
-            "ref": "deabb82cc64c06794896868ce22659c61027b693"
+            "ref": "52699c6f877247aad0c0a921c245a864e3b97e22"
         }
     },
     "develop": {}
