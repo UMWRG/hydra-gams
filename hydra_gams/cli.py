@@ -9,7 +9,7 @@ def hydra_app(category='import'):
 
 
 def get_client(hostname, **kwargs):
-    return JSONConnection(app_name='Pywr Hydra App', db_url=hostname, **kwargs)
+    return JSONConnection(app_name='GAMS Hydra App', db_url=hostname, **kwargs)
 
 
 def get_logged_in_client(context, user_id=None):
@@ -27,7 +27,7 @@ def get_logged_in_client(context, user_id=None):
 @click.option('-h', '--hostname', type=str, default=None)
 @click.option('-s', '--session', type=str, default=None)
 def cli(obj, username, password, hostname, session):
-    """ CLI for the Pywr-Hydra application. """
+    """ CLI for the GAMS-Hydra application. """
 
     obj['hostname'] = hostname
     obj['username'] = username
@@ -146,3 +146,14 @@ def export_run_import(obj, network_id,
                             gams_path=gams_path,
                             debug=debug,
                             db_url=obj['hostname'])
+
+@cli.command()
+@click.pass_obj
+@click.option('--all', is_flag=True, help='By default only the Export, Run, Import is registered. This flag registers the import, export and auto apps')
+def register(obj, all=False):
+
+    auto.register()
+
+    if all is True:
+        importer.register()
+        exporter.register()

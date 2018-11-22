@@ -1,11 +1,13 @@
 <plugin_info>
     <plugin_name>GAMS Automatic run</plugin_name>
-    <plugin_dir>GAMSAuto.bat</plugin_dir>
+    <plugin_dir></plugin_dir>
     <plugin_description>Automatically export input data file, Rum GAMS. then import  results file into Hydra.
 	</plugin_description>
     <plugin_category>model</plugin_category>
-    <plugin_command>GAMSAutoRun.py</plugin_command>
-    <plugin_shell>python</plugin_shell>
+    <plugin_command>hydra-gams run</plugin_command>
+    <plugin_shell>docker</plugin_shell>
+    <plugin_location>.</plugin_location>
+    <plugin_docker_image>umwrg/hydra-gams:latest</plugin_docker_image>
     <plugin_nativelogextension>lst</plugin_nativelogextension>
     <plugin_nativeoutputextension>gdx</plugin_nativeoutputextension>
     <plugin_location>.</plugin_location>

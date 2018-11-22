@@ -87,6 +87,9 @@ from datetime import datetime
 from dateutil import parser
 import click
 
+from pathlib import Path
+from shutil import copyfile
+
 from hydra_base.exceptions import HydraPluginError
 from hydra_client.output import write_progress, write_output, create_xml_response
 
@@ -156,6 +159,28 @@ def get_input_file_name(gams_model):
 
     return inputfilename
 
+def register():
+    import hydra_base
+    import os
+    base_plugin_dir = os.path.expanduser(hydra_base.config.get('plugin', 'default_directory'))
+    gams_plugin_dir = os.path.join(base_plugin_dir, 'gams-app')
+    app_dir = Path(os.path.join(gams_plugin_dir, 'run'))
+
+    filename = 'plugin.xml'
+
+    if not app_dir.exists():
+        app_dir.mkdir(parents=True, exist_ok=True)
+
+    app_path = os.path.dirname(os.path.expanduser(__file__))
+    app_file = os.path.join(app_path, filename)
+
+    target_path = Path(app_dir, filename)
+
+    log.info("Copying from %s to %s", app_file, target_path)
+    
+    copyfile(app_file, target_path)
+
+    log.info("GAMS Auto Run App Registered. ")
 
 def run_gams_model(gms_file, gdx_file, gams_path, debug=False):
     log.info("Running GAMS model.")
