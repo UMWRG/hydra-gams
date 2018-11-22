@@ -224,7 +224,8 @@ def run_gams_model(gms_file, gdx_file, gams_path, debug=False):
                 log.info("Results file: ", gdx_file)
     return gdx_file
 
-def export_run_import(network_id,
+def export_run_import(client,
+                      network_id,
                             scenario_id,
                             template_id,
                             gms_file,
@@ -265,7 +266,8 @@ def export_run_import(network_id,
                    time_axis,
                    export_by_type=False,
                    gams_date_time_index=False,
-                   db_url=None)
+                   db_url=None,
+                   connection=client)
 
         exporter.export()
 
@@ -276,7 +278,8 @@ def export_run_import(network_id,
                     gms_file,
                     model_gdx_file,
                     gams_path=gams_path,
-                    db_url=db_url)
+                    db_url=db_url,
+                    connection=client)
 
         importer.import_data()
 

@@ -1,6 +1,8 @@
 import click 
 from hydra_gams import exporter, importer, auto
 
+from hydra_client.connection import JSONConnection
+
 def hydra_app(category='import'):
     def hydra_app_decorator(func):
         func.hydra_app_category = category
@@ -42,6 +44,7 @@ def start_cli():
 @click.pass_obj
 @click.option('-t', '--network-id',  required=True, type=int, help='''ID of the network that will be exported.''')
 @click.option('-s', '--scenario-id', required=True, type=int, help='''ID of the scenario that will be exported.''')
+@click.option('-u', '--user-id', type=int, default=None)
 @click.option('-o', '--output',       required=True, type=click.Path(file_okay=True, dir_okay=False), help='''Output file containing exported data''')
 @click.option('-tp', '--template-id', help='''ID of the template to be used.''')
 @click.option('-nn', '--node-node', is_flag=True,
@@ -63,8 +66,12 @@ def start_cli():
                       compatible with gams date format (dd.mm.yyyy)''')
 def export(obj, network_id,scenario_id, template_id, output, node_node, link_name,start_date, end_date, time_step, time_axis, export_by_type, gams_date_time_index):
 
+
+    client = get_logged_in_client(obj, user_id=user_id)
+
     exporter.export_network(network_id,
                             scenario_id,
+                            user_id,
                             template_id,
                             output,
                             node_node,
@@ -75,30 +82,38 @@ def export(obj, network_id,scenario_id, template_id, output, node_node, link_nam
                             time_axis,
                             export_by_type,
                             gams_date_time_index,
-                            db_url=obj['hostname'])
+                            db_url=obj['hostname'],
+                            connection=client)
 
 @hydra_app(category='import')
 @cli.command(name='import')
 @click.pass_obj
 @click.option('-t', '--network-id', help='''ID of the network that will be exported.''')
 @click.option('-s', '--scenario-id',help='''ID of the scenario that will be exported.''')
+@click.option('-u', '--user-id', type=int, default=None)
 @click.option('-m', '--gms-file',   help='''Full path to the GAMS model (*.gms) used for the simulation.''')
 @click.option('-f', '--gdx-file',   help='''GDX file containing GAMS results.''')
 @click.option('--gams-path',  help='''Path of the GAMS installation.''', default=None)
 def import_results(obj, network_id, scenario_id, gms_file, gdx_file, gams_path):
 
+
+    client = get_logged_in_client(obj, user_id=user_id)
+
     importer.import_data(network_id,
                          scenario_id,
+                         user_id,
                          gms_file,
                          gdx_file,
                          gams_path=gams_path,
-                         db_url=obj['hostname'])
+                         db_url=obj['hostname'],
+                         connection=client) 
 
 @hydra_app(category='model')
 @cli.command(name='run')
 @click.pass_obj
 @click.option('-t', '--network-id', help='''ID of the network that will be exported.''')
 @click.option('-s', '--scenario-id', help='''ID of the scenario that will be exported.''')
+@click.option('-u', '--user-id', type=int, default=None)
 @click.option('-tp', '--template-id', help='''ID of the template to be used.''', default=None)
 @click.option('-m', '--gms-file', help='''Full path to the GAMS model (*.gms) used for the simulation.''')
 @click.option('-o', '--output', help='''Output file containing exported data''')
@@ -116,6 +131,7 @@ def import_results(obj, network_id, scenario_id, gms_file, gdx_file, gams_path):
 def export_run_import(obj, network_id,
                         scenario_id,
                         template_id,
+                        user_id,
                         gms_file,
                         output,
                         node_node,
@@ -129,7 +145,12 @@ def export_run_import(obj, network_id,
                         gams_date_time_index,
                         debug,
                         gams_path):
-    auto.export_run_import(network_id,
+
+
+    client = get_logged_in_client(obj, user_id=user_id)
+
+    auto.export_run_import(client,
+                           network_id,
                             scenario_id,
                             template_id,
                             gms_file,

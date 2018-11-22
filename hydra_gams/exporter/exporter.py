@@ -89,7 +89,8 @@ class GAMSExporter:
                  time_axis,
                  export_by_type=False,
                  gams_date_time_index=False,
-                 db_url=None):
+                 db_url=None,
+                connection=None):
         if template_id is not None:
             self.template_id = int(template_id)
 
@@ -127,10 +128,13 @@ class GAMSExporter:
         #explicitly specified using the 'dimensions' attribute on the group type in the template.
         self.group_dimensions = {}
 
-        self.connection = JSONConnection(app_name="GAMS Exporter", db_url=db_url)
-
-        self.connection.connect()
-        self.connection.login()
+        #There may be an open connection already
+        if connection is None:
+            self.connection = JSONConnection(app_name="GAMS Exporter", db_url=db_url)
+            self.connection.connect()
+            self.connection.login()
+        else:
+            self.connection = connection
 
         if time_axis is not None:
             time_axis = ' '.join(time_axis).split(' ')
