@@ -130,6 +130,30 @@
                         plug-in connects.</help>
         </arg>
         <arg>
+            <name>user-id</name>
+            <switch>-u</switch>
+            <multiple>N</multiple>
+            <allownew>N</allownew>
+            <argtype>int</argtype>
+            <help>The user's hydra ID</help>
+        </arg>
+        <arg>
+            <name>username</name>
+            <switch>-u</switch>
+            <multiple>N</multiple>
+            <allownew>N</allownew>
+            <argtype>int</argtype>
+            <help>The user's hydra username</help>
+        </arg>
+        <arg>
+            <name>password</name>
+            <switch>-p</switch>
+            <multiple>N</multiple>
+            <allownew>N</allownew>
+            <argtype>string</argtype>
+            <help>The user's hydra password (NOT SECURE!)</help>
+        </arg>
+        <arg>
             <name>session_id</name>
             <switch>-c</switch>
             <multiple>N</multiple>

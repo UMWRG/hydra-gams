@@ -30,13 +30,20 @@ def import_data(network_id,
                    scenario_id,
                    gms_file,
                    gdx_file,
-                   gams_path,
-                   db_url=None):
+                   gams_path=None,
+                   db_url=None,
+                   connection=None):
 
     """
         Import results from a GDX file into a network
     """
-    gdximport = GAMSImporter(network_id, scenario_id, gms_file, gdx_file)
+    gdximport = GAMSImporter(network_id,
+                             scenario_id,
+                             gms_file,
+                             gdx_file,
+                             gams_path=gams_path,
+                             db_url=db_url,
+                             connection=connection)
     gdximport.import_data()
 
 def get_gdx_files(filename):
@@ -241,7 +248,7 @@ class GAMSImporter:
             pass
         if scenario_id is None:
             raise HydraPluginError("No scenario specified.")
-
+        
         self.network = self.connection.get_network(network_id=self.network_id,
                                           include_data='Y',
                                           template_id=self.template_id,
@@ -524,14 +531,13 @@ class GAMSImporter:
 
                         elif gdxvar.dim == 1:
                             data = gdxvar.data[j]
+                            if not MGA_values:
+                                MGA_values = {"0":{}}
                             try:
                                 data_ = float(data)
-                                dataset['type'] = 'scalar'
-                                MGA_values[j] = data
+                                MGA_values["0"][j] = data
                             except ValueError:
-                                dataset['type'] = 'descriptor'
-                                #dataset['value'] = data
-                                MGA_values[j]=data
+                                MGA_values["0"][j] = data
                         elif gdxvar.dim > 0 :
                             dataset['type'] = 'dataframe'
                             MGA_values.update(self.create_dataframe_from_mga_results(j, self.MGA_index[j], gdxvar.index, gdxvar.data))
@@ -545,7 +551,7 @@ class GAMSImporter:
                     if gdxvar.var_domain!=None:
                         metadata['domain']=gdxvar.domain
                     dataset['metadata'] = metadata
-                    dataset['dimension'] = attr.resourcescenario.value.dimension
+                    dataset['dimension'] = attr.dimension
                     res_scen = dict(resource_attr_id=attr.id,
                                     attr_id=attr.attr_id,
                                     dataset=dataset)
@@ -556,8 +562,6 @@ class GAMSImporter:
             nodes.update({node.id: node.name})
             for attr in node.attributes:
                 if attr.attr_is_var == 'Y':
-                    if attr.name.lower() == 'al':
-                        import pudb; pudb.set_trace()
                     MGA_values = {}
                     metadata = {}
                     dataset = {}

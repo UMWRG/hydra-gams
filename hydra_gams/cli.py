@@ -94,14 +94,13 @@ def export(obj, network_id,scenario_id, template_id, output, node_node, link_nam
 @click.option('-m', '--gms-file',   help='''Full path to the GAMS model (*.gms) used for the simulation.''')
 @click.option('-f', '--gdx-file',   help='''GDX file containing GAMS results.''')
 @click.option('--gams-path',  help='''Path of the GAMS installation.''', default=None)
-def import_results(obj, network_id, scenario_id, gms_file, gdx_file, gams_path):
+def import_results(obj, network_id, scenario_id, user_id, gms_file, gdx_file, gams_path):
 
 
     client = get_logged_in_client(obj, user_id=user_id)
 
     importer.import_data(network_id,
                          scenario_id,
-                         user_id,
                          gms_file,
                          gdx_file,
                          gams_path=gams_path,
