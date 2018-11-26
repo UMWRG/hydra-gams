@@ -249,7 +249,7 @@ class GAMSImporter:
         if scenario_id is None:
             raise HydraPluginError("No scenario specified.")
         
-        self.network = self.connection.get_network(network_id=self.network_id,
+        self.network = self.connection.get_network(network_id=int(self.network_id),
                                           include_data='Y',
                                           template_id=self.template_id,
                                           scenario_ids=[self.scenario_id])
