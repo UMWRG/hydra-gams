@@ -955,7 +955,7 @@ class GAMSImporter:
                             continue
                         else:
                             key = index[i][5]
-                            col = "!%s.%s"%(index[i][4], idx)
+                            col = "%s"%(idx)
                             if col in elements:
                                 elements[col][key] = data[i]
                             else:
