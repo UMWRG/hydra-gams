@@ -18,7 +18,7 @@
     "default": {
         "hydra-base": {
             "git": "https://github.com/hydraplatform/hydra-base.git",
-            "ref": "af4888ac8136bb9a392cf065f157369c7e9de980"
+            "ref": "75e100c7104fbcb4353b99cc4c741aecbe7acaa4"
         },
         "hydra-client-python": {
             "git": "https://github.com/hydraplatform/hydra-client-python.git",
@@ -26,7 +26,7 @@
         },
         "hydra-gams": {
             "git": "https://github.com/UMWRG/hydra-gams.git",
-            "ref": "5474c67d28fe1b671400e336badab5597862e5d1"
+            "ref": "5d3e37b162780987218b23843879865b72ac5e95"
         }
     },
     "develop": {}
