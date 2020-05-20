@@ -26,7 +26,7 @@ eventlet==0.23.0
 future==0.16.0
 greenlet==0.4.14
 html5lib==1.0.1
-httplib2==0.11.3
+httplib2==0.18.0
 -e git+https://gitlab.hydra.org.uk/hydra/offline-manager@8a5d59f3a7eeb220bf702df0ad62b7fdf43b6a63#egg=HWI_Offline_Deployment_Manager
 -e git+https://github.com/hydraplatform/hydra-base@336bfe6fe967c396209d6b15b024018b192701fd#egg=hydra_base
 hydra-client-python==0.1
