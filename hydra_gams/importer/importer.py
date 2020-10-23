@@ -113,7 +113,7 @@ def get_index(index_file_names):
 
 
 class GAMSImporter:
-    def __init__(self, network_id, scenario_id, gms_file, gdx_file, gams_path=None, connection=None, db_url=None):
+    def __init__(self, network_id, scenario_id, gms_file, gdx_file, gams_path=None, connection=None, db_url=None, network=None):
         import gdxcc
         self.gdxcc=gdxcc
         self.gdx_handle = gdxcc.new_gdxHandle_tp()
@@ -131,14 +131,13 @@ class GAMSImporter:
         self.steps       = 9
         self.current_step = 0
 
-        self.network = None
-        self.res_scenario = None
+        self.network = network
+        self.res_scenarios = []
         self.attrs = dict()
         self.time_axis = dict()
 
         self.gms_file = gms_file
         self.gdx_file = gdx_file
-        self.gams_path = gams_path
         self.network_id=network_id
         self.scenario_id=scenario_id
         self.template_id=None
@@ -174,13 +173,13 @@ class GAMSImporter:
 
         errors      = []
         message="Import successful."
-        try: 
-            check_gams_installation(self.gams_path)
+        try:
+            check_gams_installation()
             self.write_progress()
 
             self.load_network()
             self.write_progress()
-        
+
             self.load_gams_file()
             self.write_progress()
 
@@ -216,10 +215,10 @@ class GAMSImporter:
             message = "An unknown error has occurred"
             if e == '':
                 if hasattr(e, 'strerror'):
-                    errors = [e.strerror]
+                    errors = [e]
             else:
                 errors = [e]
-        
+
         self.write_progress(self.steps)
 
         text = create_xml_response('GAMSImport', self.network_id, [self.scenario_id],message=message, errors=errors)
@@ -234,7 +233,12 @@ class GAMSImporter:
 
         # Use the network id specified by the user, if it is None, fall back to
         # the network id read from the gms file
-        self.is_licensed=is_licensed
+        self.is_licensed = is_licensed
+
+        if self.network:
+            log.info("Not loading network as has been provided")
+            return
+
         try:
             network_id = int(self.network_id)
         except (TypeError, ValueError):
@@ -248,13 +252,11 @@ class GAMSImporter:
             pass
         if scenario_id is None:
             raise HydraPluginError("No scenario specified.")
-        
+
         self.network = self.connection.get_network(network_id=int(self.network_id),
-                                          include_data='Y',
                                           template_id=self.template_id,
                                           scenario_ids=[self.scenario_id])
 
-        self.res_scenario = self.network.scenarios[0].resourcescenarios
         if(is_licensed is False):
             if len(self.network.nodes)>20:
                 raise HydraPluginError("The licence is limited demo (maximum limits are 20 nodes and 20 times steps).  Please contact software vendor (hydraplatform1@gmail.com) to get a full licence")
@@ -266,7 +268,6 @@ class GAMSImporter:
         """
         self.is_licensed=is_licensed
         self.network =network
-        self.res_scenario = self.network.scenarios[0].resourcescenarios
         if(is_licensed is False):
             if len(self.network.nodes)>20:
                 raise HydraPluginError("The licence is limited demo (maximum limits are 20 nodes and 20 times steps).  Please contact software vendor (hydraplatform1@gmail.com) to get a full licence")
@@ -542,7 +543,7 @@ class GAMSImporter:
                             dataset['type'] = 'dataframe'
                             MGA_values.update(self.create_dataframe_from_mga_results(j, self.MGA_index[j], gdxvar.index, gdxvar.data))
 
-                            
+
                         # Add data
                 if len(MGA_values)>0 and self.check_for_empty_values(MGA_values)==True:
                     dataset['value']=json.dumps(MGA_values)
@@ -551,11 +552,10 @@ class GAMSImporter:
                     if gdxvar.var_domain!=None:
                         metadata['domain']=gdxvar.domain
                     dataset['metadata'] = metadata
-                    dataset['dimension'] = attr.dimension
                     res_scen = dict(resource_attr_id=attr.id,
                                     attr_id=attr.attr_id,
                                     dataset=dataset)
-                    self.res_scenario.append(res_scen)
+                    self.res_scenarios.append(res_scen)
         # Node attributes
         nodes = dict()
         for node in self.network.nodes:
@@ -612,14 +612,13 @@ class GAMSImporter:
                         if gdxvar.var_domain != None:
                             metadata['domain'] = gdxvar.domain
                         dataset['value']=json.dumps(MGA_values)
-                        
+
                         dataset['type'] = 'dataframe'
                         dataset['metadata'] = metadata
-                        dataset['dimension'] = attr.dimension
                         res_scen = dict(resource_attr_id=attr.id,
                                         attr_id=attr.attr_id,
                                         dataset=dataset)
-                        self.res_scenario.append(res_scen)
+                        self.res_scenarios.append(res_scen)
         # Link attributes
         for link in self.network.links:
             for attr in link.attributes:
@@ -701,11 +700,10 @@ class GAMSImporter:
                         if gdxvar.var_domain != None:
                             metadata['domain'] = gdxvar.domain
                         dataset['metadata'] = metadata
-                        dataset['dimension'] = attr.dimension
                         res_scen = dict(resource_attr_id=attr.id,
                                         attr_id=attr.attr_id,
                                         dataset=dataset)
-                        self.res_scenario.append(res_scen)
+                        self.res_scenarios.append(res_scen)
 
     def attr_data_for_single_sol(self):  # Network attributes
         for attr in self.network.attributes:
@@ -757,7 +755,7 @@ class GAMSImporter:
                         res_scen = dict(resource_attr_id=attr.id,
                                         attr_id=attr.attr_id,
                                         dataset=dataset)
-                        self.res_scenario.append(res_scen)
+                        self.res_scenarios.append(res_scen)
         # Node attributes
         nodes = dict()
         for node in self.network.nodes:
@@ -821,12 +819,11 @@ class GAMSImporter:
                             if gdxvar.var_domain != None:
                                 metadata['domain'] = gdxvar.domain
                             dataset['metadata'] = metadata
-                            dataset['dimension'] = attr.dimension
 
                             res_scen = dict(resource_attr_id=attr.id,
                                             attr_id=attr.attr_id,
                                             dataset=dataset)
-                            self.res_scenario.append(res_scen)
+                            self.res_scenarios.append(res_scen)
 
         # Link attributes
         for link in self.network.links:
@@ -912,11 +909,10 @@ class GAMSImporter:
                             if gdxvar.var_domain != None:
                                 metadata['domain'] = gdxvar.domain
                             dataset['metadata'] = metadata
-                            dataset['dimension'] = attr.dimension
                             res_scen = dict(resource_attr_id=attr.id,
                                             attr_id=attr.attr_id,
                                             dataset=dataset)
-                            self.res_scenario.append(res_scen)
+                            self.res_scenarios.append(res_scen)
 
 
 
@@ -1017,6 +1013,5 @@ class GAMSImporter:
 
     def save(self):
         log.info("Saving")
-        self.network.scenarios[0].resourcescenarios = self.res_scenario
         #Make this empty to avoid potential updates, and to save on work in Hydra
-        self.connection.update_scenario(scenario=JSONObject(self.network.scenarios[0]), update_groups=False)
+        self.connection.update_resourcedata(self.scenario_id, self.res_scenarios)
