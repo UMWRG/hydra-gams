@@ -7,7 +7,6 @@ from string import ascii_lowercase
 
 import pandas as pd
 
-from hydra_client.connection import JSONConnection
 from hydra_base.exceptions import HydraPluginError
 from hydra_base.util.hydra_dateutil import reindex_timeseries
 
@@ -17,7 +16,8 @@ from hydra_gams.lib import GAMSnetwork, convert_date_to_timeindex
 
 log = logging.getLogger(__name__)
 
-def export_network(network_id,
+def export_network(client,
+                   network_id,
                    scenario_id,
                    template_id,
                    output,
@@ -28,45 +28,44 @@ def export_network(network_id,
                    time_step,
                    time_axis,
                    export_by_type=False,
-                   gams_date_time_index=False,
-                   db_url=None):
+                   gams_date_time_index=False):
 
     """
         Export a network to a GAMS text input file.
     """
-    message     = None
-    errors      = []
+    message = None
+    errors = []
 
     try:
-        e = GAMSExporter(network_id,
-                   scenario_id,
-                   template_id,
-                   output,
-                   node_node,
-                   link_name,
-                   start_date,
-                   end_date,
-                   time_step,
-                   time_axis,
-                   export_by_type=export_by_type,
-                   gams_date_time_index=gams_date_time_index,
-                   db_url=db_url)
+        e = GAMSExporter(client,
+                         network_id,
+                         scenario_id,
+                         template_id,
+                         output,
+                         node_node,
+                         link_name,
+                         start_date,
+                         end_date,
+                         time_step,
+                         time_axis,
+                         export_by_type=export_by_type,
+                         gams_date_time_index=gams_date_time_index)
         e.export()
 
     except HydraPluginError as e:
-        write_progress(steps, steps)
+        write_progress(10, 10)
         log.exception(e)
         errors = [e]
     except Exception as e:
-        write_progress(steps, steps)
+        write_progress(10, 10)
         log.exception(e)
         errors = []
         if e == '':
             if hasattr(e, 'strerror'):
-                errors = [e.strerror]
+                errors = [e]
         else:
             errors = [e]
-    
+
     text = create_xml_response('GAMSExport',
                                network_id,
                               [scenario_id],
@@ -77,9 +76,11 @@ def export_network(network_id,
 
 
 class GAMSExporter:
-    def __init__(self, network_id,
-                       scenario_id,
-                       template_id,
+    def __init__(self,
+                 connection,
+                 network_id,
+                 scenario_id,
+                 template_id,
                  output,
                  node_node,
                  link_name,
@@ -88,9 +89,8 @@ class GAMSExporter:
                  time_step,
                  time_axis,
                  export_by_type=False,
-                 gams_date_time_index=False,
-                 db_url=None,
-                connection=None):
+                 gams_date_time_index=False):
+
         if template_id is not None:
             self.template_id = int(template_id)
 
@@ -105,9 +105,15 @@ class GAMSExporter:
         self.time_index = []
         self.time_axis =None
         self.sets=[]
-        self.steps = 7 
+        self.steps = 7
         self.current_step=0
-        
+
+        self.node_types = []
+        self.link_types = []
+        self.group_types = []
+        self.network_type = None
+
+
         #things which get written to the file without any logic (pre-formateed gams input text, or comments, for example
         self.direct_outputs = []
 
@@ -121,20 +127,14 @@ class GAMSExporter:
         #Keep track of all the groups which are subgroups (within other groups) as they are treated differently
         #to top-level groups. NOTE: This currently only supports 1 level of subgrouping
         self.subgroups = {}
-    
+
         #Many groups have multiple indices. Empty groups must be exported with
-        #the appropriate number of indices to avoid compilation errors. So we 
+        #the appropriate number of indices to avoid compilation errors. So we
         #must keep track of how many dimensions each group has (default is 1 unless
         #explicitly specified using the 'dimensions' attribute on the group type in the template.
         self.group_dimensions = {}
 
-        #There may be an open connection already
-        if connection is None:
-            self.connection = JSONConnection(app_name="GAMS Exporter", db_url=db_url)
-            self.connection.connect()
-            self.connection.login()
-        else:
-            self.connection = connection
+        self.connection = connection
 
         if time_axis is not None:
             time_axis = ' '.join(time_axis).split(' ')
@@ -201,27 +201,26 @@ class GAMSExporter:
         log.info("Network exported successfully")
 
     def get_network(self, is_licensed):
+
         net = self.connection.get_network(network_id=self.network_id,
                                           include_data='Y',
                                           template_id=self.template_id,
-                                          scenario_ids=[self.scenario_id])
+                                          scenario_ids=[self.scenario_id],
+                                          include_metadata=True)
 
         self.hydranetwork=net
         log.info("Network retrieved")
 
         self.template_id = net.types[0].template_id
-        self.template = self.connection.get_template(net.types[0].template_id) 
+        self.template = self.connection.get_template(net.types[0].template_id)
 
-        for t in self.template.templatetypes:
-            self.type_attr_default_datasets[t.id] = {}
-            for ta in t.typeattrs:
-                attr_name = self.attr_id_map[ta.attr_id].name
-                self.type_attr_default_datasets[t.id][attr_name] = ta.default_dataset
+        for t_type in self.template.templatetypes:
+            self.type_attr_default_datasets[t_type.id] = {}
+            for typeattr in t_type.typeattrs:
+                attr_name = self.attr_id_map[typeattr.attr_id].name
+                if typeattr.default_dataset is not None:
+                    self.type_attr_default_datasets[t_type.id][attr_name] = typeattr.default_dataset
 
-        self.node_types = []
-        self.link_types = []
-        self.group_types = []
-        self.network_type = None
         for templatetype in self.template.templatetypes:
             if templatetype.resource_type == 'NODE':
                 self.node_types.append(templatetype)
@@ -252,9 +251,9 @@ class GAMSExporter:
                                                net.scenarios[0]['time_step'],
                                                time_axis=None)
         if (self.time_axis is None):
-            self.get_time_axix_from_attributes_values(self.network.nodes)
+            self.get_time_axis_from_attributes_values(self.network.nodes)
         if (self.time_axis is None):
-            self.get_time_axix_from_attributes_values(self.network.links)
+            self.get_time_axis_from_attributes_values(self.network.links)
 
         #If links have a 'code' attirbute, build this dict
         #THis attribute is used for simpler modelling, rather than using start/end nodes to refer to a link
@@ -297,7 +296,7 @@ class GAMSExporter:
         if self.links_as_name is False and len(self.junc_node)==0:
             self.check_links_between_nodes()
 
-        
+
         #FIX ME: Export desriptors first as they don't rely on other entries, but others
         #may well rely on them.
         self.sets += '* Network definition\n\n'
@@ -360,7 +359,7 @@ class GAMSExporter:
 
         for object_type in self.node_types:
             self.sets += object_type.name + '(i) /\n'
-            for node in self.network.get_node(node_type=object_type.name):
+            for node in self.network.get_node(node_type_id=object_type.id):
                 self.sets += node.name + '\n'
             self.sets += '/\n\n'
 
@@ -454,7 +453,7 @@ class GAMSExporter:
                     self.sets += 'links(i, jun_set, j) vector of '+object_type.name+' links /\n'
                 else:
                     self.sets += '(i,j) /\n'
-            for link in self.network.get_link(link_type=object_type.name):
+            for link in self.network.get_link(link_type_id=object_type.id):
                 if self.links_as_name:
                     self.sets += link.name + '\n'
                 else:
@@ -479,7 +478,6 @@ class GAMSExporter:
                 #is it a subgroup? If so, store it as such and don't write it
                 #like a first-level group
                 if group.name in self.subgroups:
-
                     manual_idx = group.get_attribute(attr_name='index')
                     if manual_idx is not None:
                         for l in group_links:
@@ -541,23 +539,23 @@ class GAMSExporter:
         for object_type in self.group_types:
             self.sets += object_type.name + '\n'
         self.sets += '/\n\n'
-        
+
         for group in self.network.groups:
             group_subgroups=self.network.get_group(group=group.ID)
             if len(group_subgroups) > 0:
                 #THis is a subgroup, so add to the list of subgroups for use when
                 #exporting the node / link groups in case they are treated differently
-                grouptype = group.template[self.template_id]
+                grouptype = group.get_type_by_template(self.template_id)
                 for subgroup in group_subgroups:
-                    subgrouptype = subgroup.template[self.template_id]
+                    subgrouptype = subgroup.get_type_by_template(self.template_id)
                     self.subgroups[subgroup.name] = {'parent': group.name,
                                                      'type':subgrouptype,
-                                                     'parent_type': grouptype,
+                                                     'parent_type': grouptype.name,
                                                      'contents':[],
                                                      'index':None}
 
         for object_type in self.group_types:
-            groups_of_type = self.network.get_group(group_type=object_type.name)
+            groups_of_type = self.network.get_group(group_type_id=object_type.id)
             if len(groups_of_type) > 0 and groups_of_type[0].name not in self.subgroups:
                 self.sets += object_type.name
                 self.sets +=  ' /\n'
@@ -600,48 +598,53 @@ class GAMSExporter:
     def export_subgroups(self):
 
         self.sets += '* Subgroups ....\n\n'
-        
+
         subgroup_sets = {}
         subgrouptype_parenttype_map = {}
-        #Index by default is 'I' for nodes and 'I, J' for links. 
+        #Index by default is 'I' for nodes and 'I, J' for links.
         #But it can be other things such as 'I, jun_set, J' or 'Code', so need to keep track of it.
-        subgroup_type_index = {} 
+        subgroup_type_index = {}
 
-        #Rearrange the data to put the group contents together, keyed on the subgroup type 
+        #Rearrange the data to put the group contents together, keyed on the subgroup type
         for subgroupname, subgroupdata in self.subgroups.items():
             parent_type=subgroupdata['parent_type']
             subgrouptype=subgroupdata['type']
             parent = subgroupdata['parent']
 
-            subgrouptype_parenttype_map[subgrouptype] = parent_type
-            
+            subgrouptype_parenttype_map[subgrouptype.name] = parent_type
+
             contents = []
             for c in subgroupdata['contents']:
                 contents.append((parent, c))
-            
+
+            if len(contents) == 0:
+                #self.empty_groups.append(subgrouptype)
+                log.info("Found an empty set %s. Adding to empty sets.", subgroupname)
+                continue
+
             if subgroupdata.get('index') is not None:
-                subgroup_type_index[subgrouptype] = subgroupdata['index']
+                subgroup_type_index[subgrouptype.name] = subgroupdata['index']
             else:
                 if contents[0][1].count('.') == 0:
-                    subgroup_type_index[subgrouptype] = "I"
+                    subgroup_type_index[subgrouptype.name] = "I"
                 else:
                     #Dependin on the number of dots, create an index i, j or i, j, k etc.
                     inum = ord('i')
                     idx = []
                     for i in range(contents[0][1].count('.')+1):
                         idx.append(chr(inum+i))
-                    subgroup_type_index[subgrouptype] = ",".join(idx)
+                    subgroup_type_index[subgrouptype.name] = ",".join(idx)
 
-            if subgroup_sets.get(subgrouptype) is None:
-                subgroup_sets[subgrouptype] = contents
+            if subgroup_sets.get(subgrouptype.name) is None:
+                subgroup_sets[subgrouptype.name] = contents
             else:
-                subgroup_sets[subgrouptype] = subgroup_sets[subgrouptype] + contents
-        
+                subgroup_sets[subgrouptype.name] = subgroup_sets[subgrouptype.name] + contents
+
         #Now that the data's in the correct format, #print it
-        for subgrouptype, contents in subgroup_sets.items():
-            parent_type = subgrouptype_parenttype_map[subgrouptype]
-            index = subgroup_type_index[subgrouptype]
-            self.sets += "%s (%s,%s)\n"%(subgrouptype, parent_type, index)
+        for subgrouptype_name, contents in subgroup_sets.items():
+            parent_type = subgrouptype_parenttype_map[subgrouptype_name]
+            index = subgroup_type_index[subgrouptype_name]
+            self.sets += "%s (%s,%s)\n"%(subgrouptype_name, parent_type, index)
             self.sets += "/\n"
             for c in contents:
                 self.sets += "%s . %s\n"%(c[0], c[1])
@@ -658,10 +661,10 @@ class GAMSExporter:
         non_empty_group_IDS = [g.ID for g in non_empty_groups]
         non_empty_group_types = []
         for group in self.network.groups:
-            if group.ID not in non_empty_group_IDS:
-                self.empty_groups.append(group.name)
+            #if group.ID not in non_empty_group_IDS:
+            #    self.empty_groups.append(group.get_type_by_template(self.template_id))
 
-            non_empty_group_types.append(group.template[self.template_id])
+            non_empty_group_types.append(group.get_type_by_template(self.template_id).name)
 
         #Go through all group types and add empty sets for all those that don't
         #have a group set in the data
@@ -669,7 +672,7 @@ class GAMSExporter:
             self.group_dimensions[grouptype.name] = self.type_attr_default_datasets[grouptype.id].get('dimensions', {'value':1})['value']
 
             if grouptype.name not in non_empty_group_types:
-                self.empty_groups.append(grouptype.name)
+                self.empty_groups.append(grouptype)
 
     def create_connectivity_matrix(self):
         ff='{0:<'+self.name_len+'}'
@@ -1075,7 +1078,7 @@ class GAMSExporter:
             attr_outputs.append('\n')
         return attr_outputs
 
-    def get_time_axix_from_attributes_values(self, resources):
+    def get_time_axis_from_attributes_values(self, resources):
         attributes = []
         attr_names = []
         t_axis = []
@@ -1259,7 +1262,7 @@ class GAMSExporter:
         return key
 
 
-    def export_hashtable (self, resources,res_type=None):
+    def export_hashtable(self, resources,res_type=None):
         """Export hashtable which includes seasonal data .
                     """
         islink = res_type == 'LINK'
@@ -1282,22 +1285,23 @@ class GAMSExporter:
                     ids[attr.name][resource] = self.resourcescenarios_ids[attr.resource_attr_id]
 
                     if attr.name not in data_types:
-                        type_=self.resourcescenarios_ids[attr.resource_attr_id].value.metadata
-                        if "type" in type_:
-                            data_types[attr.name]=type_["type"].lower()
+                        metadata = self.resourcescenarios_ids[attr.resource_attr_id].value.metadata
+                        log.debug(metadata)
+                        if "type" in metadata:
+                            data_types[attr.name]=metadata["type"].lower()
                         else:
                             data_types[attr.name]=self.resourcescenarios_ids[attr.resource_attr_id].type
-                        if 'id' in type_:
-                            id_=type_['id']
+                        if 'id' in metadata:
+                            id_=metadata['id']
                              # "Found id and it -------------->", id_, attr.name
                             ids_key[attr.name]=id_
                     if attr.name not in sets_namess:
-                        if "key" in type_:
-                            sets_namess[attr.name] = type_["key"].lower()
+                        if "key" in metadata:
+                            sets_namess[attr.name] = metadata["key"].lower()
 
-                    if "sub_key" in type_:
+                    if "sub_key" in metadata:
                         if attr.name+"_sub_key" not in sets_namess:
-                            sets_namess[attr.name+"_sub_key"] = type_["sub_key"].lower()
+                            sets_namess[attr.name+"_sub_key"] = metadata["sub_key"].lower()
 
         for attribute_name in ids.keys():
 
@@ -1315,7 +1319,7 @@ class GAMSExporter:
                     add=resource.name+"_"+attribute_name
                     if add in self.added_pars:
                         continue
-                    df = pd.read_json(rs.dataset.value) 
+                    df = pd.read_json(rs.dataset.value)
                     if (set_name not in self.hashtables_keys):
                         self.hashtables_keys[set_name]=list(df.index)
                     else:
@@ -1412,7 +1416,7 @@ class GAMSExporter:
                         sub_set_name = sets_namess[attribute_name+"_sub_key" ]
                     else:
                         sub_set_name = attribute_name + "sub_set__index"
-                   
+
                     for key in df.columns:
                         t_ = t_ + ff.format(key)
 
@@ -1439,6 +1443,7 @@ class GAMSExporter:
                             attr_outputs.append('\n' + str(t_))
                     counter += 1
                     for key in df.index:
+                        key = str(key)
                         if islink == True:
                             if self.links_as_name:
                                 attr_outputs.append(
@@ -1460,7 +1465,7 @@ class GAMSExporter:
                             attr_outputs.append('\n' + ff.format(key+'.'+resource.name))
 
                         if sub_set_name not in self.hashtables_keys:
-                            self.hashtables_keys[sub_set_name] = df.columns 
+                            self.hashtables_keys[sub_set_name] = df.columns
 
                         for col in df.columns:
                             if res_type != "NETWORK":
@@ -1474,6 +1479,7 @@ class GAMSExporter:
                 for resource, rs in ids[attribute_name].items():
                     value_ = json.loads(rs.dataset.value)
                     keys = value_
+                    #this is where the EBSD 'yr' table gets created.
                     attr_outputs.extend(self.get_resourcess_array_pars_collection(self.network.nodes, attribute_name, keys, set_name))
                     if (set_name not in self.hashtables_keys):
                         self.hashtables_keys[set_name] = keys
@@ -1536,9 +1542,6 @@ class GAMSExporter:
                 attr_outputs.append('/;')
         return attr_outputs
 
-
-    def prepare_hashtable_date(selfself):
-        pass
 
     def is_it_in_list(self, item, list):
         for item_ in list:
@@ -1616,7 +1619,7 @@ class GAMSExporter:
                         self.added_pars.append(add)
 
                     df = pd.read_json(rs.dataset.value)
-
+                    #setting the 'yr' here.
                     if (set_name not in self.hashtables_keys):
                         self.hashtables_keys[set_name] = list(df.index)
                     else:
@@ -1816,21 +1819,21 @@ class GAMSExporter:
             for set in set_collections:
                     if(islink ==True):
                         if set== 'to_NODE_type':
-                            tt=self.network.get_node(node_name=resource.to_node).template[self.template_id]
+                            tt=self.network.get_node(node_name=resource.to_node).get_type_by_template(self.template_id)
                             if line:
-                                line = line + ' . '+tt
+                                line = line + ' . '+tt.name
                             else:
                                 line=tt
                         elif  set == 'from_NODE_type':
-                            tt=self.network.get_node(node_name=resource.from_node).template[self.template_id]
+                            tt=self.network.get_node(node_name=resource.from_node).get_type_by_template(self.template_id)
                             if line:
-                                line = line + ' . '+tt
+                                line = line + ' . '+tt.name
                             else:
                                 line=tt
                         elif set == 'links_types':
-                            tt=self.network.get_link(link_name=resource.name).template[self.template_id]
+                            tt=self.network.get_link(link_name=resource.name).get_type_by_template(self.template_id)
                             if line:
-                                line = line + ' . ' + tt
+                                line = line + ' . ' + tt.name
                             else:
                                 line = tt
                         else:
@@ -2066,22 +2069,42 @@ class GAMSExporter:
 
     def write_file(self):
         log.info("Writing file %s.", self.filename)
-        
+
         for key in self.hashtables_keys:
             self.sets += ('\n' + key + '\n/')
             for val in self.hashtables_keys[key]:
                 self.sets += ('\n' + str(val))
             self.sets += ('\n/\n\n')
-        
+
 
         self.sets += '* empty groups\n\n'
+        log.info(g.name for g in self.empty_groups)
+        #keep a list of the group names which have been rendered in case
+        #empty groups have been added twice
+        rendered_groups = []
+
         for empty_group in self.empty_groups:
+
+            if empty_group.name in rendered_groups:
+                log.info("Duplicate empty group %s found. Ignoring", empty_group.name)
+                continue
+
             index = "(*)"
-            if int(self.group_dimensions.get(empty_group, 1)) > 1:
-                indices = ['*'] * int(self.group_dimensions[empty_group])
+            if int(self.group_dimensions.get(empty_group.name, 1)) > 1:
+                indices = ['*'] * int(self.group_dimensions[empty_group.name])
                 index = "(" + ",".join(indices) + ")"
-            self.sets += ('\n' + empty_group + index + '\n/')
+
+            #check if an index is specified i the group's layout
+            try:
+                group_layout = json.loads(empty_group.layout)
+                index = group_layout.get('index', index)
+            except:
+                pass
+
+            self.sets += ('\n' + empty_group.name + index + '\n/')
             self.sets += ('\n/\n\n')
+
+            rendered_groups.append(empty_group.name)
 
         self.write_direct_outputs()
 
@@ -2096,25 +2119,9 @@ def translate_attr_name(name):
     if isinstance(name, str):
         translator = ''.join(chr(c) if chr(c).isalnum()
                              else '_' for c in range(256))
-    elif isinstance(name, unicode):
-        translator = UnicodeTranslate()
 
     name = name.translate(translator)
     return name
-
-
-class UnicodeTranslate(dict):
-    """Translate a unicode attribute name to a valid GAMS variable.
-    """
-    def __missing__(self, item):
-        char = unichr(item)
-        repl = u'_'
-        if item < 256 and char.isalnum():
-            repl = char
-        self[item] = repl
-        return repl
-
-
 
 def get_dict(obj):
     if type(obj) is list:
