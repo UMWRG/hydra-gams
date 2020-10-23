@@ -19,9 +19,8 @@ if (sys.version_info > (3, 0)):
 
 
 class GamsModel(object):
-    def __init__(self, gamspath, working_directory, turn_debug_on):
-        if(gamspath==None):
-            gamspath=get_gams_path()
+    def __init__(self, working_directory, turn_debug_on):
+        gamspath=get_gams_path()
 
         log.info("Using GAMS Path: %s", gamspath)
         try:
@@ -177,7 +176,7 @@ class GAMSnetwork(HydraNetwork):
         """
         if use_link_name is False:
             for i, link in enumerate(self.links):
-                if jun is None: 
+                if jun is None:
                     self.links[i].gams_name = link.from_node + ' . ' + link.to_node
                 else:
                     self.links[i].gams_name = link.from_node + ' . ' + jun + ' . ' + link.to_node
@@ -280,9 +279,14 @@ def import_gms_data(filename):
             gms_data += line
     return gms_data
 
-def check_gams_installation(gams_path=None):
-    if(gams_path==None):
-        gams_path=get_gams_path()
+def check_gams_installation():
+    """
+    Check that there is a valid, working GAMS installation. If the GAMS_PATH
+    environmental variable is set, this is assumed to be true
+    """
+    gams_path = os.environ.get('GAMS_PATH')
+    if(gams_path is None):
+        gams_path = get_gams_path()
     try:
         real_path = os.path.realpath(os.path.abspath(gams_path))
         api_path = os.path.join(real_path,'apifiles','Python','api')
@@ -302,14 +306,8 @@ def get_gams_path():
     the operating system being used.
     This will only work with gams version 23.8 and above.
     """
-    cmd_args = sys.argv
+    gams_path = os.getenv('GAMS_PATH')
 
-
-    for i, arg in enumerate(sys.argv):
-        if arg in ['-G', '--gams-path']:
-            gams_path = cmd_args[i + 1]
-
-    gams_path = None
     gams_python_api_path = None
     if gams_path is None:
         if os.name == 'nt':

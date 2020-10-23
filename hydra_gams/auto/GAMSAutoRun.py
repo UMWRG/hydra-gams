@@ -29,7 +29,6 @@ Option                 Short  Parameter  Description
 --session_id           -c     SESSION_ID Session ID used by the calling software
                                          If left empty, the plugin will attempt
                                          to log in itself.
---gams-path            -G     GAMS_PATH  File path of the GAMS installation.
 --gdx-file             -f     GDX_FILE   GDX file containing GAMS results
 **Optional arguments:**
 ====================== ====== ========== =================================
@@ -76,38 +75,35 @@ Option                 Short  Parameter  Description
 ====================== ======= ========== ======================================
 Example:
 =========
-        -t 4 -s 4 -tx  2000-01-01, 2000-02-01, 2000-03-01, 2000-04-01, 2000-05-01, 2000-06-01 -o "c:\temp\demo2.dat" -m "c:\temp\Demo2.gms"
+  -t 4 -s 4 -tx  2000-01-01, 2000-02-01, 2000-03-01, 2000-04-01, 2000-05-01, 2000-06-01 ..
+  .. -o "c:\temp\demo2.dat" -m "c:\temp\Demo2.gms"
 '''
-import sys
 import os
 import time
 import logging
-import argparse as ap
 from datetime import datetime
-from dateutil import parser
-import click
-
 from pathlib import Path
 from shutil import copyfile
+from dateutil import parser
 
+import hydra_base
 from hydra_base.exceptions import HydraPluginError
 from hydra_client.output import write_progress, write_output, create_xml_response
 
 from hydra_gams.lib import GamsModel
 from hydra_gams import GAMSExporter, GAMSImporter
 
-import logging
-log = logging.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 def get_files_list(directory, ext):
     '''
     return list of files with specific ext on a folder with their last modified dates and times
     '''
-    files_list={}
+    files_list = {}
     for file_ in os.listdir(directory):
         if file_.endswith(ext):
             absolute_path = os.stat(os.path.join(directory,file_))
-            files_list[file_]=time.ctime(absolute_path.st_mtime)
+            files_list[file_] = time.ctime(absolute_path.st_mtime)
     return files_list
 
 
@@ -116,52 +112,52 @@ def get_input_file_name(gams_model):
        Identify the name of the input file used by the model. if it is not provided by the user
     '''
 
+    if os.path.isfile(os.path.expanduser(gams_model)) is False:
+        raise HydraPluginError(f'Gams file {gams_model} not found.')
 
-    if os.path.isfile(os.path.expanduser(gams_model))==False:
-        raise HydraPluginError('Gams file '+gams_model+' not found.')
-
-    inputfilename=None
-    gamsfile=open(gams_model, "r")
+    inputfilename = None
+    gamsfile = open(gams_model, "r")
     for line in gamsfile:
-            if "include" not in line.lower():
-                continue
-            sline = line.strip()
-            if len(sline) > 0 and sline[0].startswith('$'):
-                lineparts = sline.split()
-                if lineparts[1] == 'include':
-                    name=sline
-                    name=name.replace('$','')
-                    name=name.replace('"','')
-                    name=name.replace(';','')
-                    name=name.replace('include','')
-                    name=name.strip()
-                    inputfilename=os.path.join(os.path.dirname(gams_model),name)
-                    break
-                elif lineparts[0] == '$include':
-                    name=sline
-                    name=name.replace('$','')
-                    name=name.replace('"','')
-                    name=name.replace(';','')
-                    name=name.replace('include','')
-                    name=name.strip()
-                    inputfilename=os.path.join(os.path.dirname(gams_model),name)
-                    break
+        if "include" not in line.lower():
+            continue
+        sline = line.strip()
+        if len(sline) > 0 and sline[0].startswith('$'):
+            lineparts = sline.split()
+            if lineparts[1] == 'include':
+                name = sline
+                name = name.replace('$', '')
+                name = name.replace('"', '')
+                name = name.replace(';', '')
+                name = name.replace('include', '')
+                name = name.strip()
+                inputfilename = os.path.join(os.path.dirname(gams_model),name)
+                break
+            elif lineparts[0] == '$include':
+                name = sline
+                name = name.replace('$', '')
+                name = name.replace('"', '')
+                name = name.replace(';', '')
+                name = name.replace('include', '')
+                name = name.strip()
+                inputfilename=os.path.join(os.path.dirname(gams_model),name)
+                break
 
     gamsfile.close()
 
     if inputfilename is None:
-        raise HydraPluginError('Unable to identify the name of the input file required by the model. Please specify the name of the input filename.')
+        raise HydraPluginError('Unable to identify the name of the input '
+                               'file required by the model. '
+                               'Please specify the name of the input filename.')
 
-    if os.path.exists(os.path.dirname(os.path.realpath(inputfilename)))==False:
-            raise HydraPluginError('Output file directory '+ os.path.dirname(inputfilename)+' does not exist.')
+    inputfilepath = os.path.dirname(os.path.realpath(inputfilename))
+    if os.path.exists(inputfilepath) is False:
+        raise HydraPluginError(f'Output file directory {inputfilepath} does not exist.')
 
-    log.info("Exporting data to: %s", inputfilename)
+    LOG.info("Exporting data to: %s", inputfilename)
 
     return inputfilename
 
 def register():
-    import hydra_base
-    import os
     base_plugin_dir = os.path.expanduser(hydra_base.config.get('plugin', 'default_directory'))
     gams_plugin_dir = os.path.join(base_plugin_dir, 'gams-app')
     app_dir = Path(os.path.join(gams_plugin_dir, 'run'))
@@ -176,72 +172,76 @@ def register():
 
     target_path = Path(app_dir, filename)
 
-    log.info("Copying from %s to %s", app_file, target_path)
-    
+    LOG.info("Copying from %s to %s", app_file, target_path)
+
     copyfile(app_file, target_path)
 
-    log.info("GAMS Auto Run App Registered. ")
+    LOG.info("GAMS Auto Run App Registered. ")
 
-def run_gams_model(gms_file, gdx_file, gams_path, debug=False):
-    log.info("Running GAMS model.")
-    cur_time=datetime.now().replace(microsecond=0)
-    working_directory=os.path.dirname(gms_file)
+def run_gams_model(gms_file, debug=False):
+    """
+        Run a gams model using the supplied GMS file.
+    """
+    LOG.info("Running GAMS model.")
+    cur_time = datetime.now().replace(microsecond=0)
+    working_directory = os.path.dirname(gms_file)
     if working_directory == '':
         working_directory = '.'
 
-    model = GamsModel(gams_path, working_directory, debug)
+    model = GamsModel(working_directory, debug)
     model.add_job(gms_file)
     write_output("Running GAMS model, please note that this may take time")
     model.run()
-    log.info("Running GAMS model finsihed")
+    LOG.info("Running GAMS model finsihed")
     # if result file is not provided, it looks for it automatically at GAMS WD
-    sol_pool='solnpool.gdx'
+    sol_pool = 'solnpool.gdx'
     res = 'results_MGA.gdx'
-    if gdx_file is None:
-        log.info("Extracting results from %s.", working_directory)
-        files_list=get_files_list(working_directory, '.gdx')
-        if sol_pool in files_list:
-            dt = parser.parse(files_list[sol_pool])
-            dt_2 = parser.parse(files_list[res])
-            delta = (dt - cur_time).total_seconds()
-            delta_2 = (dt_2 - cur_time).total_seconds()
-            # todo chaeck if dgx files exist
-            if delta >= 0 and delta_2 >= 0:
-                gdx_list=[os.path.join(working_directory, sol_pool) ,os.path.join(working_directory, res)]
-                gdx_file =gdx_list
-                return gdx_file
-            else:
-                raise HydraPluginError("Tried looking for %s and %s created since the model was run, but was unable to find them."%(sol_pool, res))
-        else:
-            for file_ in files_list:
-                dt = parser.parse(files_list[file_])
-                delta = (dt-cur_time).total_seconds()
-                if delta>=0:
-                    gdx_file = os.path.join(working_directory, file_)
-            if gdx_file is None:
-                  raise HydraPluginError('Result file is not provided/found.')
-            else:
-                log.info("Results file: ", gdx_file)
+
+    LOG.info("Extracting results from %s.", working_directory)
+    files_list = get_files_list(working_directory, '.gdx')
+    if sol_pool in files_list:
+        parsed_dt = parser.parse(files_list[sol_pool])
+        parsed_dt_2 = parser.parse(files_list[res])
+        delta = (parsed_dt - cur_time).total_seconds()
+        delta_2 = (parsed_dt_2 - cur_time).total_seconds()
+        # todo chaeck if dgx files exist
+        if delta >= 0 and delta_2 >= 0:
+            gdx_list = [os.path.join(working_directory, sol_pool),
+                        os.path.join(working_directory, res)]
+
+            gdx_file = gdx_list
+            return gdx_file
+        raise HydraPluginError(f'Tried looking for {sol_pool} and {res} created '
+                               'since the model was run, but was '
+                               'unable to find them.')
+    else:
+        for file_ in files_list:
+            parsed_dt = parser.parse(files_list[file_])
+            delta = (parsed_dt-cur_time).total_seconds()
+            if delta >= 0:
+                gdx_file = os.path.join(working_directory, file_)
+        if gdx_file is None:
+            raise HydraPluginError('Result file is not provided/found.')
+
+        LOG.info("Results file: %s", gdx_file)
+
     return gdx_file
 
 def export_run_import(client,
                       network_id,
-                            scenario_id,
-                            template_id,
-                            gms_file,
-                            output,
-                            node_node,
-                            link_name,
-                            start_date,
-                            end_date,
-                            time_step,
-                            time_axis,
-                            gdx_file,
-                            export_by_type,
-                            gams_date_time_index,
-                            gams_path=None,
-                            debug=False,
-                            db_url=None):
+                      scenario_id,
+                      gms_file,
+                      template_id=None,
+                      output=None,
+                      node_node=None,
+                      link_name=None,
+                      start_date=None,
+                      end_date=None,
+                      time_step=None,
+                      time_axis=None,
+                      export_by_type=None,
+                      gams_date_time_index=None,
+                      debug=False):
     """
         1. Export a hydra network to a GAMS input text file
         2. Run the specified model, using the newly created input file
@@ -252,42 +252,41 @@ def export_run_import(client,
 
 
         if output is None:
-            output=get_input_file_name(gms_file)
+            output = get_input_file_name(gms_file)
 
-        exporter = GAMSExporter(network_id,
-                   scenario_id,
-                   template_id,
-                   output,
-                   node_node,
-                   link_name,
-                   start_date,
-                   end_date,
-                   time_step,
-                   time_axis,
-                   export_by_type=False,
-                   gams_date_time_index=False,
-                   db_url=None,
-                   connection=client)
+        exporter = GAMSExporter(client,
+                                network_id,
+                                scenario_id,
+                                template_id,
+                                output=output,
+                                node_node=node_node,
+                                link_name=link_name,
+                                start_date=start_date,
+                                end_date=end_date,
+                                time_step=time_step,
+                                time_axis=time_axis,
+                                export_by_type=export_by_type,
+                                gams_date_time_index=gams_date_time_index,
+                                )
 
         exporter.export()
 
-        model_gdx_file = run_gams_model(gms_file, gdx_file, gams_path, debug=debug)
-        
+        model_gdx_file = run_gams_model(gms_file, debug=debug)
+
         importer = GAMSImporter(network_id,
-                    scenario_id,
-                    gms_file,
-                    model_gdx_file,
-                    gams_path=gams_path,
-                    db_url=db_url,
-                    connection=client)
+                                scenario_id,
+                                gms_file,
+                                model_gdx_file,
+                                network = exporter.hydranetwork,
+                                connection=client)
 
         importer.import_data()
 
         message = "Run successfully"
-        errors  = []
+        errors = []
 
     except HydraPluginError as e:
-        log.exception(e)
+        LOG.exception(e)
         errors = [e]
         message = "An error has occurred"
     except Exception as e:
@@ -297,13 +296,13 @@ def export_run_import(client,
                 errors = [e.strerror]
         else:
             errors = [e]
-        log.exception(e)
+        LOG.exception(e)
         message = "An unknown error has occurred"
-    
+
     write_progress(steps, steps)
 
 
     if len(errors) > 0:
         raise Exception("An Error occurred running the Model. ")
- 
+
     text = create_xml_response('GAMSAuto', network_id, [scenario_id], message=message, errors=errors)

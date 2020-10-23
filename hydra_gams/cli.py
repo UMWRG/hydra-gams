@@ -64,14 +64,14 @@ def start_cli():
 @click.option('-gd', '--gams_date_time_index', is_flag=True,
               help='''Set the time indexes to be timestamps which are 
                       compatible with gams date format (dd.mm.yyyy)''')
-def export(obj, network_id,scenario_id, template_id, output, node_node, link_name,start_date, end_date, time_step, time_axis, export_by_type, gams_date_time_index):
+@click.option('--user-id', type=int, default=None)
+def export(obj, network_id,scenario_id, template_id, output, node_node, link_name,start_date, end_date, time_step, time_axis, export_by_type, gams_date_time_index, user_id):
 
 
     client = get_logged_in_client(obj, user_id=user_id)
 
     exporter.export_network(network_id,
                             scenario_id,
-                            user_id,
                             template_id,
                             output,
                             node_node,
@@ -90,11 +90,10 @@ def export(obj, network_id,scenario_id, template_id, output, node_node, link_nam
 @click.pass_obj
 @click.option('-t', '--network-id', help='''ID of the network that will be exported.''')
 @click.option('-s', '--scenario-id',help='''ID of the scenario that will be exported.''')
-@click.option('-u', '--user-id', type=int, default=None)
 @click.option('-m', '--gms-file',   help='''Full path to the GAMS model (*.gms) used for the simulation.''')
 @click.option('-f', '--gdx-file',   help='''GDX file containing GAMS results.''')
-@click.option('--gams-path',  help='''Path of the GAMS installation.''', default=None)
-def import_results(obj, network_id, scenario_id, user_id, gms_file, gdx_file, gams_path):
+@click.option('--user-id', type=int, default=None)
+def import_results(obj, network_id, scenario_id, gms_file, gdx_file, user_id):
 
 
     client = get_logged_in_client(obj, user_id=user_id)
@@ -103,7 +102,6 @@ def import_results(obj, network_id, scenario_id, user_id, gms_file, gdx_file, ga
                          scenario_id,
                          gms_file,
                          gdx_file,
-                         gams_path=gams_path,
                          db_url=obj['hostname'],
                          connection=client) 
 
@@ -112,7 +110,6 @@ def import_results(obj, network_id, scenario_id, user_id, gms_file, gdx_file, ga
 @click.pass_obj
 @click.option('-t', '--network-id', help='''ID of the network that will be exported.''')
 @click.option('-s', '--scenario-id', help='''ID of the scenario that will be exported.''')
-@click.option('-u', '--user-id', type=int, default=None)
 @click.option('-tp', '--template-id', help='''ID of the template to be used.''', default=None)
 @click.option('-m', '--gms-file', help='''Full path to the GAMS model (*.gms) used for the simulation.''')
 @click.option('-o', '--output', help='''Output file containing exported data''')
@@ -125,12 +122,11 @@ def import_results(obj, network_id, scenario_id, user_id, gms_file, gdx_file, ga
 @click.option('-f', '--gdx-file', help='GDX file containing GAMS results.')
 @click.option('-et', '--export_by_type', is_flag=True, help='''Use this switch to export data based on type, rather than attribute.''')
 @click.option('-gd', '--gams_date_time_index', is_flag=True, help='Set the time indexes to be timestamps which are compatible with gams date format (dd.mm.yyyy)')
-@click.option('-G', '--gams-path', help='Path of the GAMS installation.')
 @click.option('--debug', is_flag=True, help='''Use this switch to send highly technical info and GAMS log to stdout.''')
+@click.option('--user-id', type=int, default=None)
 def export_run_import(obj, network_id,
                         scenario_id,
                         template_id,
-                        user_id,
                         gms_file,
                         output,
                         node_node,
@@ -143,7 +139,7 @@ def export_run_import(obj, network_id,
                         export_by_type,
                         gams_date_time_index,
                         debug,
-                        gams_path):
+                        user_id)
 
 
     client = get_logged_in_client(obj, user_id=user_id)
@@ -163,7 +159,6 @@ def export_run_import(obj, network_id,
                             gdx_file,
                             export_by_type,
                             gams_date_time_index,
-                            gams_path=gams_path,
                             debug=debug,
                             db_url=obj['hostname'])
 
