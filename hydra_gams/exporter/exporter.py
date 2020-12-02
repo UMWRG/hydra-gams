@@ -17,7 +17,6 @@ from hydra_gams.lib import GAMSnetwork, convert_date_to_timeindex
 log = logging.getLogger(__name__)
 
 def export_network(client,
-                   network_id,
                    scenario_id,
                    template_id,
                    output,
@@ -38,7 +37,6 @@ def export_network(client,
 
     try:
         e = GAMSExporter(client,
-                         network_id,
                          scenario_id,
                          template_id,
                          output,
@@ -67,7 +65,7 @@ def export_network(client,
             errors = [e]
 
     text = create_xml_response('GAMSExport',
-                               network_id,
+                               e.hydranetwork.id,
                               [scenario_id],
                                errors = errors,
                                message=message)
@@ -78,7 +76,6 @@ def export_network(client,
 class GAMSExporter:
     def __init__(self,
                  connection,
-                 network_id,
                  scenario_id,
                  template_id,
                  output,
@@ -89,7 +86,8 @@ class GAMSExporter:
                  time_step,
                  time_axis,
                  export_by_type=False,
-                 gams_date_time_index=False):
+                 gams_date_time_index=False,
+                 settings_text=''):
 
         if template_id is not None:
             self.template_id = int(template_id)
@@ -97,17 +95,17 @@ class GAMSExporter:
         self.use_gams_date_index=False
         self.gams_date_time_index = gams_date_time_index
         self.export_by_type = export_by_type
-        self.network_id = int(network_id)
+        self.network_id = None
         self.scenario_id = int(scenario_id)
         self.template_id = int(template_id) if template_id is not None else None
         self.type_attr_default_datasets = {}
         self.filename = output
         self.time_index = []
         self.time_axis =None
-        self.sets=[]
+        self.sets=""
+        self.settings_text = settings_text ## put in some arbitrary settings
         self.steps = 7
         self.current_step=0
-
         self.node_types = []
         self.link_types = []
         self.group_types = []
@@ -176,6 +174,11 @@ class GAMSExporter:
         write_output("Exporting Network")
         log.info("Exporting Network")
         self.write_progress()
+
+        scenario_summary = self.connection.get_scenario(self.scenario_id, include_data=False)
+
+        self.network_id=scenario_summary.network_id
+
         self.get_network(True)
 
         self.write_progress()
@@ -203,7 +206,7 @@ class GAMSExporter:
     def get_network(self, is_licensed):
 
         net = self.connection.get_network(network_id=self.network_id,
-                                          include_data='Y',
+                                          include_data=True,
                                           template_id=self.template_id,
                                           scenario_ids=[self.scenario_id],
                                           include_metadata=True)
@@ -272,16 +275,19 @@ class GAMSExporter:
         log.info("Gams network loaded")
         self.network.gams_names_for_links(use_link_name=self.links_as_name)
         log.info("Names for links retrieved")
-        self.sets = """* Data exported from Hydra using GAMSplugin.
+
+        info = f"""* Data exported from Hydra using GAMSplugin.
 * (c) Copyright 2015, University of Manchester
 *
-* %s: %s
-* Network-ID:  %s
-* Scenario-ID: %s
+* {self.network.name}: {self.network.description}
+* Network-ID:  self.network.id
+* Scenario-ID: self.network.scenario_id
 *******************************************************************************
 
-""" % (self.network.name, self.network.description,
-            self.network.ID, self.network.scenario_id)
+"""
+
+        settings_text =  f"*settings*\n{self.settings_text}\n\n*****************"
+        self.sets += info + settings_text
 
     def check_links_between_nodes(self):
         for link in self.network.links:
@@ -295,7 +301,6 @@ class GAMSExporter:
     def export_network(self):
         if self.links_as_name is False and len(self.junc_node)==0:
             self.check_links_between_nodes()
-
 
         #FIX ME: Export desriptors first as they don't rely on other entries, but others
         #may well rely on them.
@@ -485,7 +490,7 @@ class GAMSExporter:
                             if self.link_code.get(l.name):
                                 ref_name = self.link_code[l.name]
                             else:
-                                raise Exception("Group uses an index attribute %s but it is not found on link %s"%(manual_idx, l.name))
+                                raise Exception("Group %s uses an index attribute '%s' but it is not found on link %s"%(group.name, manual_idx.name, l.name))
                             self.subgroups[group.name]['contents'].append(ref_name)
                             self.subgroups[group.name]['index'] = manual_idx.value
                     else:
@@ -758,7 +763,6 @@ class GAMSExporter:
         data = ['\n* Network data\n']
         data.extend(self.export_parameters_using_attributes([self.network],'scalar',res_type='NETWORK'))
         self.export_descriptor_parameters_using_attributes([self.network])
-
         data.extend(self.export_hashtable([self.network],res_type='NETWORK'))
 
         data.append('\n\n\n* Nodes data\n')
@@ -896,6 +900,7 @@ class GAMSExporter:
                     title= "Scalar"
                 else:
                     title="Parameter"
+
             for attribute in attributes:
                 if islink == True:
                     if self.links_as_name:
@@ -906,7 +911,7 @@ class GAMSExporter:
                         else:
                             attr_outputs.append('\n'+title+ ' '+ attribute.name+'(i,j)\n')
                 elif(res_type is 'NETWORK'):
-                     attr_outputs.append('\n'+title +' '+ attribute.name+'\n')
+                    attr_outputs.append('\n'+title +' '+ attribute.name+'\n')
                 else:
                     attr_outputs.append('\n'+title+' '+ attribute.name+'(i)\n')
 
@@ -1304,7 +1309,6 @@ class GAMSExporter:
                             sets_namess[attr.name+"_sub_key"] = metadata["sub_key"].lower()
 
         for attribute_name in ids.keys():
-
             attr_outputs.append('\n\n\n*' + attribute_name)
             ff = '{0:<' + self.array_len + '}'
             t_ = ff.format('')

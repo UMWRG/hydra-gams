@@ -228,7 +228,6 @@ def run_gams_model(gms_file, debug=False):
     return gdx_file
 
 def export_run_import(client,
-                      network_id,
                       scenario_id,
                       gms_file,
                       template_id=None,
@@ -241,7 +240,8 @@ def export_run_import(client,
                       time_axis=None,
                       export_by_type=None,
                       gams_date_time_index=None,
-                      debug=False):
+                      debug=False,
+                      settings_text=''):
     """
         1. Export a hydra network to a GAMS input text file
         2. Run the specified model, using the newly created input file
@@ -255,7 +255,6 @@ def export_run_import(client,
             output = get_input_file_name(gms_file)
 
         exporter = GAMSExporter(client,
-                                network_id,
                                 scenario_id,
                                 template_id,
                                 output=output,
@@ -267,14 +266,14 @@ def export_run_import(client,
                                 time_axis=time_axis,
                                 export_by_type=export_by_type,
                                 gams_date_time_index=gams_date_time_index,
+                                settings_text=settings_text
                                 )
 
         exporter.export()
 
         model_gdx_file = run_gams_model(gms_file, debug=debug)
 
-        importer = GAMSImporter(network_id,
-                                scenario_id,
+        importer = GAMSImporter(scenario_id,
                                 gms_file,
                                 model_gdx_file,
                                 network = exporter.hydranetwork,
@@ -305,4 +304,4 @@ def export_run_import(client,
     if len(errors) > 0:
         raise Exception("An Error occurred running the Model. ")
 
-    text = create_xml_response('GAMSAuto', network_id, [scenario_id], message=message, errors=errors)
+    text = create_xml_response('GAMSAuto', exporter.network.id, [scenario_id], message=message, errors=errors)

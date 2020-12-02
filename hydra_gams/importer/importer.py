@@ -113,7 +113,7 @@ def get_index(index_file_names):
 
 
 class GAMSImporter:
-    def __init__(self, network_id, scenario_id, gms_file, gdx_file, gams_path=None, connection=None, db_url=None, network=None):
+    def __init__(self, scenario_id, gms_file, gdx_file, gams_path=None, connection=None, db_url=None, network=None):
         import gdxcc
         self.gdxcc=gdxcc
         self.gdx_handle = gdxcc.new_gdxHandle_tp()
@@ -138,7 +138,9 @@ class GAMSImporter:
 
         self.gms_file = gms_file
         self.gdx_file = gdx_file
-        self.network_id=network_id
+
+        self.network_id=network.id if network is not None else None
+
         self.scenario_id=scenario_id
         self.template_id=None
 
@@ -239,12 +241,9 @@ class GAMSImporter:
             log.info("Not loading network as has been provided")
             return
 
-        try:
-            network_id = int(self.network_id)
-        except (TypeError, ValueError):
-            pass
-        if network_id is None:
-            raise HydraPluginError("No network specified.")
+        scenario_summary = self.connection.get_scenario(scenario_id=int(self.scenario_id),
+                                                        include_data='N')
+        self.network_id=scenario_summary.network_id
 
         try:
             scenario_id = int(self.scenario_id)
