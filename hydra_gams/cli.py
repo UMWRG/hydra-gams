@@ -1,5 +1,6 @@
-import click 
+import click
 from hydra_gams import exporter, importer, auto
+from . import gdxinspector
 
 from hydra_client.connection import JSONConnection
 
@@ -50,8 +51,8 @@ def start_cli():
 @click.option('-nn', '--node-node', is_flag=True,
               help="""(Default) Export links as 'from_name . end_name'.""")
 @click.option('-ln', '--link-name', is_flag=True,
-              help='''Export links as link name only. 
-                      If two nodes can be connected by more than one link, 
+              help='''Export links as link name only.
+                      If two nodes can be connected by more than one link,
                       you should choose this option.''')
 @click.option('-st', '--start-date', help='''Start date of the time period used for simulation.''')
 @click.option('-en', '--end-date',   help='''End date of the time period used for simulation.''')
@@ -59,10 +60,10 @@ def start_cli():
 @click.option('-tx', '--time-axis', multiple=True,
               help='''Time axis for the modelling period (a list of comma separated time stamps).''')
 @click.option('-et', '--export_by_type', is_flag=True,
-              help='''to export data based on types, set this 
+              help='''to export data based on types, set this
                       option to 'y' or 'yes', default is export data by attributes.''')
 @click.option('-gd', '--gams_date_time_index', is_flag=True,
-              help='''Set the time indexes to be timestamps which are 
+              help='''Set the time indexes to be timestamps which are
                       compatible with gams date format (dd.mm.yyyy)''')
 @click.option('--user-id', type=int, default=None)
 def export(obj, network_id,scenario_id, template_id, output, node_node, link_name,start_date, end_date, time_step, time_axis, export_by_type, gams_date_time_index, user_id):
@@ -103,7 +104,7 @@ def import_results(obj, network_id, scenario_id, gms_file, gdx_file, user_id):
                          gms_file,
                          gdx_file,
                          db_url=obj['hostname'],
-                         connection=client) 
+                         connection=client)
 
 @hydra_app(category='model')
 @cli.command(name='run')
@@ -139,7 +140,7 @@ def export_run_import(obj, network_id,
                         export_by_type,
                         gams_date_time_index,
                         debug,
-                        user_id)
+                        user_id):
 
 
     client = get_logged_in_client(obj, user_id=user_id)
@@ -161,6 +162,13 @@ def export_run_import(obj, network_id,
                             gams_date_time_index,
                             debug=debug,
                             db_url=obj['hostname'])
+
+@cli.command(name='inspect')
+@click.option('-f', '--filename', help='''The GDX file to inspect''')
+def inspect_gdx(filename):
+    gdxinspector.inspect(filename)
+
+
 
 @cli.command()
 @click.pass_obj
