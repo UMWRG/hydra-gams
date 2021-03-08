@@ -179,7 +179,7 @@ class GAMSExporter:
 
         self.network_id=scenario_summary.network_id
 
-        self.get_network(True)
+        self.get_network()
 
         self.write_progress()
         if(self.gams_date_time_index is True):
@@ -203,10 +203,11 @@ class GAMSExporter:
         write_output("Network exported successfully")
         log.info("Network exported successfully")
 
-    def get_network(self, is_licensed):
+    def get_network(self):
 
         net = self.connection.get_network(network_id=self.network_id,
                                           include_data=True,
+                                          include_results=False,
                                           template_id=self.template_id,
                                           scenario_ids=[self.scenario_id],
                                           include_metadata=True)
@@ -267,11 +268,6 @@ class GAMSExporter:
             self.use_jun = True
         else:
             self.use_jun = False
-        if(is_licensed is False):
-            if len(self.network.nodes)>20:
-                raise HydraPluginError("The licence is limited demo (maximum limits are 20 nodes and 20 times steps).  Please contact software vendor (hydraplatform1@gmail.com) to get a full licence")
-            if self.time_axis is not None and len (self.time_axis)>20:
-                raise HydraPluginError("The licence is limited demo (maximum limits are 20 nodes and 20 times steps).  Please contact software vendor (hydraplatform1@gmail.com) to get a full licence")
         log.info("Gams network loaded")
         self.network.gams_names_for_links(use_link_name=self.links_as_name)
         log.info("Names for links retrieved")
@@ -280,8 +276,8 @@ class GAMSExporter:
 * (c) Copyright 2015, University of Manchester
 *
 * {self.network.name}: {self.network.description}
-* Network-ID:  self.network.id
-* Scenario-ID: self.network.scenario_id
+* Network-ID:  {self.network.id}
+* Scenario-ID: {self.network.scenario_id}
 *******************************************************************************
 
 """
@@ -2093,7 +2089,10 @@ class GAMSExporter:
                 log.info("Duplicate empty group %s found. Ignoring", empty_group.name)
                 continue
 
-            index = "(*)"
+            try:
+                index = empty_group.layout.get('index', "(*)")
+            except:
+                index = "(*)"
             if int(self.group_dimensions.get(empty_group.name, 1)) > 1:
                 indices = ['*'] * int(self.group_dimensions[empty_group.name])
                 index = "(" + ",".join(indices) + ")"

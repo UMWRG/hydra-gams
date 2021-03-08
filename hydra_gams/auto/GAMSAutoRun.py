@@ -1,83 +1,4 @@
 #(c) Copyright 2013, 2014, 2015 University of Manchester\
-'''
-
-plugin_name: GAMS
-            - Export a network from Hydra to a gams input text file.
-            - Rum GAMS.
-            - Import a gdx results file into Hydra.
-**Mandatory Args:**
-====================== ======= ========== =========================================
-Option                 Short   Parameter  Description
-====================== ======= ========== =========================================
---network              -t      NETWORK    ID of the network where results will
-                                          be imported to. Ideally this coincides
-                                          with the network exported to GAMS.
---scenario             -s      SCENARIO   ID of the underlying scenario used for
---template-id          -tp     TEMPLATE   ID of the template used for exporting
-                                          resources. Attributes that don't
-                                          belong to this template are ignored.
---output               -o      OUTPUT     Filename of the output file.
---gams-model           -m      GMS_FILE   Full path to the GAMS model (*.gms)
-                                          used for the simulation.
-**Server-based arguments**
-====================== ====== ========== =========================================
-Option                 Short  Parameter  Description
-====================== ====== ========== =========================================
---server_url           -u     SERVER_URL Url of the server the plugin will
-                                         connect to.
-                                         Defaults to localhost.
---session_id           -c     SESSION_ID Session ID used by the calling software
-                                         If left empty, the plugin will attempt
-                                         to log in itself.
---gdx-file             -f     GDX_FILE   GDX file containing GAMS results
-**Optional arguments:**
-====================== ====== ========== =================================
-Option                 Short  Parameter  Description
-====================== ====== ========== =================================
---group-nodes-by       -gn    GROUP_ATTR Group nodes by this attribute(s).
---group_links-by       -gl    GROUP_ATTR Group links by this attribute(s).
-====================== ====== ========== =================================
-**Switches:**
-====================== ====== =========================================
-Option                 Short  Description
-====================== ====== =========================================
---export_by_type       -et    Set export data based on types or based
-                              on attributes only, default is export
-                              data by attributes unless this option
-                              is set.
-====================== ====== =========================================
-For Export function:
-====================
-Specifying the time axis
-~~~~~~~~~~~~~~~~~~~~~~~~
-One of the following two options for specifying the time domain of the model is
-mandatory:
-**Option 1:**
-====================== ====== ========== =======================================
-Option                 Short  Parameter  Description
-====================== ====== ========== =======================================
---start-date           -st    START_DATE  Start date of the time period used for
-                                          simulation.
---end-date             -en    END_DATE    End date of the time period used for
-                                          simulation.
---time-step            -dt    TIME_STEP   Time step used for simulation. The
-                                          time step needs to be specified as a
-                                          valid time length as supported by
-                                          Hydra's unit conversion function (e.g.
-                                          1 s, 3 min, 2 h, 4 day, 1 mon, 1 yr)
-====================== ======= ========== ======================================
-**Option 2:**
-====================== ====== ========== ======================================
-Option                 Short  Parameter  Description
-====================== ======= ========== ======================================
---time-axis             -tx    TIME_AXIS  Time axis for the modelling period (a
-                                          list of comma separated time stamps).
-====================== ======= ========== ======================================
-Example:
-=========
-  -t 4 -s 4 -tx  2000-01-01, 2000-02-01, 2000-03-01, 2000-04-01, 2000-05-01, 2000-06-01 ..
-  .. -o "c:\temp\demo2.dat" -m "c:\temp\Demo2.gms"
-'''
 import os
 import time
 import logging
@@ -189,7 +110,7 @@ def run_gams_model(gms_file, debug=False):
         working_directory = '.'
 
     model = GamsModel(working_directory, debug)
-    model.add_job(gms_file)
+    model_job = model.add_job(gms_file)
     write_output("Running GAMS model, please note that this may take time")
     model.run()
     LOG.info("Running GAMS model finsihed")
