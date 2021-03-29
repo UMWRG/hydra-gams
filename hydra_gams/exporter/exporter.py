@@ -661,10 +661,14 @@ class GAMSExporter:
         non_empty_groups = node_groups + link_groups + subgroup_groups
         non_empty_group_IDS = [g.ID for g in non_empty_groups]
         non_empty_group_types = []
+        #keep track of the group names to make sure that no empty groups with the same
+        #name are added later. This is an edge case where the name of a group is the same
+        #as a group type name, thus creating the possibility of duplicate group definitions in the input file
+        group_names = []
         for group in self.network.groups:
             #if group.ID not in non_empty_group_IDS:
             #    self.empty_groups.append(group.get_type_by_template(self.template_id))
-
+            group_names.append(group.name)
             non_empty_group_types.append(group.get_type_by_template(self.template_id).name)
 
         #Go through all group types and add empty sets for all those that don't
@@ -672,7 +676,7 @@ class GAMSExporter:
         for grouptype in self.group_types:
             self.group_dimensions[grouptype.name] = self.type_attr_default_datasets[grouptype.id].get('dimensions', {'value':1})['value']
 
-            if grouptype.name not in non_empty_group_types:
+            if grouptype.name not in non_empty_group_types and grouptype.name not in group_names:
                 self.empty_groups.append(grouptype)
 
     def create_connectivity_matrix(self):
