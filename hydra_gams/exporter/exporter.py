@@ -1447,6 +1447,7 @@ class GAMSExporter:
                             attr_outputs.append('\n' + str(t_))
                     counter += 1
                     for key in df.index:
+                        orig_key = key
                         key = str(key)
                         if islink == True:
                             if self.links_as_name:
@@ -1473,10 +1474,10 @@ class GAMSExporter:
 
                         for col in df.columns:
                             if res_type != "NETWORK":
-                                data_str = ff.format(str((df[col][key])))
+                                data_str = ff.format(str((df[col][orig_key])))
                                 attr_outputs.append(data_str)
                             else:
-                                data_str = ff.format(keys[i]) + ff.format(str(float(df[col][key])))
+                                data_str = ff.format(keys[i]) + ff.format(str(float(df[col][orig_key])))
                                 attr_outputs.append(data_str + '\n')
 
             elif type_ == "nodes_array_collection" and res_type == "NETWORK":
