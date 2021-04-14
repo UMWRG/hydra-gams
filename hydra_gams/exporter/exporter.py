@@ -87,6 +87,7 @@ class GAMSExporter:
                  time_axis,
                  export_by_type=False,
                  gams_date_time_index=False,
+                 default_dict = {},
                  settings_text=''):
 
         if template_id is not None:
@@ -99,11 +100,18 @@ class GAMSExporter:
         self.scenario_id = int(scenario_id)
         self.template_id = int(template_id) if template_id is not None else None
         self.type_attr_default_datasets = {}
+        ##default datasets, keyed on attribute name
+        self.attr_default_datasets = {}
         self.filename = output
         self.time_index = []
         self.time_axis =None
         self.sets=""
         self.settings_text = settings_text ## put in some arbitrary settings
+        ##this is a dictionary, keyed on attribute name.
+        ##If a particular attribute is not contained in the input data, then it
+        ##can be specified in this dict. Often used to ensure a model runs even when
+        ##the hydra network may not contain some data required for it to run
+        self.default_dict = default_dict ##
         self.steps = 7
         self.current_step=0
         self.node_types = []
@@ -224,6 +232,7 @@ class GAMSExporter:
                 attr_name = self.attr_id_map[typeattr.attr_id].name
                 if typeattr.default_dataset is not None:
                     self.type_attr_default_datasets[t_type.id][attr_name] = typeattr.default_dataset
+                    self.attr_default_datasets[typeattr.attr_id] = typeattr.default_dataset
 
         for templatetype in self.template.templatetypes:
             if templatetype.resource_type == 'NODE':
@@ -782,6 +791,10 @@ class GAMSExporter:
         data.extend(self.export_timeseries_using_attributes (self.network.links, res_type='LINK'))
         self.export_arrays(self.network.links) #??????
         data.extend(self.export_hashtable(self.network.links, res_type = 'LINK'))
+
+        data.append('\n\n\n* Default data\n')
+        data.extend(self.export_default_values())
+
         self.output = "%s%s"%(self.output, ''.join(data))
         log.info("Data exported")
 
@@ -1215,6 +1228,33 @@ class GAMSExporter:
                 return attr_outputs
             else:
                 return []
+
+    def export_default_values(self):
+            """Export any values which have been set as default values in the template
+            but which are not present in the network data.
+            """
+            attr_outputs = []
+            if not self.default_dict:
+                log.info("No default values to write")
+                return
+
+            used_attribute_names = []
+            for resource in self.network.links:
+                for attr in resource.attributes:
+                    if attr.name not in used_attribute_names:
+                        used_attribute_names.append(attr.name)
+            for resource in self.network.nodes:
+                for attr in resource.attributes:
+                    if attr.attr_id not in used_attribute_names:
+                        used_attribute_names.append(attr.name)
+
+            values_to_write = set(self.default_dict) - set(used_attribute_names)
+
+            for value_to_write in values_to_write:
+                attr_outputs.append(self.default_dict[value_to_write])
+                attr_outputs.append('\n')
+            return attr_outputs
+
 
     def get_time_value(self, value, timestamps):
         '''

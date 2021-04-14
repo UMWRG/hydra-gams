@@ -162,6 +162,7 @@ def export_run_import(client,
                       export_by_type=None,
                       gams_date_time_index=None,
                       debug=False,
+                      default_dict = {},
                       settings_text=''):
     """
         1. Export a hydra network to a GAMS input text file
@@ -187,6 +188,7 @@ def export_run_import(client,
                                 time_axis=time_axis,
                                 export_by_type=export_by_type,
                                 gams_date_time_index=gams_date_time_index,
+                                default_dict = default_dict,
                                 settings_text=settings_text
                                 )
 
