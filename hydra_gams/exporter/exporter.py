@@ -1236,7 +1236,7 @@ class GAMSExporter:
             attr_outputs = []
             if not self.default_dict:
                 log.info("No default values to write")
-                return
+                return attr_outputs
 
             used_attribute_names = []
             for resource in self.network.links:
