@@ -294,6 +294,36 @@ class GAMSExporter:
         settings_text =  f"*settings*\n{self.settings_text}\n\n*****************"
         self.sets += info + settings_text
 
+    def _get_index(self, df):
+        """
+            This is a private funciton which is used to extract a correctly ordered
+            index from a dataframe.
+        """
+        index = list(df.index)
+        try:
+            el_1 = df.index[0]
+            float(df.index[0])
+            numerical_index = None
+            ##the first ellement is a numbner, so order the index numerically
+            if isinstance(el_1, str):
+                #check if it's an index of strings and if so, check if they're
+                #floats or ints by checking for the presenbce if a dot.
+                if el_1.find('.') >= 0:
+                    numerical_index = [float(i) for i in index]
+                else:
+                    numerical_index = [int(i) for i in index]
+            else:
+                #if it's float-compatible and it's not a string it must already
+                #be numerical
+                numerical_index = index
+
+            numerical_index.sort() ## now sort the numerical list
+
+            return numerical_index
+        except:
+            return index
+
+
     def check_links_between_nodes(self):
         for link in self.network.links:
             for link_ in self.network.links:
@@ -1365,10 +1395,10 @@ class GAMSExporter:
                         continue
                     df = pd.read_json(rs.dataset.value)
                     if (set_name not in self.hashtables_keys):
-                        self.hashtables_keys[set_name]=list(df.index)
+                        self.hashtables_keys[set_name]=self._get_index(df)
                     else:
                         keys_=self.hashtables_keys[set_name]
-                        self.hashtables_keys[set_name]=self.compare_sets(list(df.index), keys_)
+                        self.hashtables_keys[set_name]=self.compare_sets(self._get_index(df), keys_)
 
                     for key in df.index:
                         t_ = t_ + ff.format(key)
@@ -1453,6 +1483,7 @@ class GAMSExporter:
                     df = pd.read_json(rs.dataset.value)
 
                     keys = df.index
+
                     if set_name not in self.hashtables_keys:
                         self.hashtables_keys[set_name] = keys
 
@@ -1524,7 +1555,7 @@ class GAMSExporter:
                 for resource, rs in ids[attribute_name].items():
                     value_ = json.loads(rs.dataset.value)
                     keys = value_
-                    #this is where the EBSD 'yr' table gets created.
+                    #this is where the EBSD 'yr' and 'counter' table gets created.
                     attr_outputs.extend(self.get_resourcess_array_pars_collection(self.network.nodes, attribute_name, keys, set_name))
                     if (set_name not in self.hashtables_keys):
                         self.hashtables_keys[set_name] = keys
@@ -1664,12 +1695,12 @@ class GAMSExporter:
                         self.added_pars.append(add)
 
                     df = pd.read_json(rs.dataset.value)
-                    #setting the 'yr' here.
+                    #setting the 'yr' and 'counter' here.
                     if (set_name not in self.hashtables_keys):
-                        self.hashtables_keys[set_name] = list(df.index)
+                        self.hashtables_keys[set_name] = self._get_index(df)
                     else:
                         keys_ = self.hashtables_keys[set_name]
-                        self.hashtables_keys[set_name] = self.compare_sets(list(df.index), keys_)
+                        self.hashtables_keys[set_name] = self.compare_sets(self._get_index(df), keys_)
 
                     for index in df.index:
                         for column in df.columns:
@@ -1712,7 +1743,7 @@ class GAMSExporter:
                     df = pd.read_json(rs.dataset.value)
 
                     if set_name not in self.hashtables_keys:
-                        self.hashtables_keys[set_name] = list(df.index)
+                        self.hashtables_keys[set_name] = self._get_index(df)
 
                     for index in df.index:
                         for column in df.columns:
