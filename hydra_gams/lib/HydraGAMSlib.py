@@ -239,7 +239,7 @@ def import_gms_data(filename):
     Read whole .gms file and expand all $ include statements found.
     """
     if os.path.isfile(os.path.expanduser(filename))==False:
-        raise HydraPluginError('Gams file '+args.gms_file+' not found.')
+        raise HydraPluginError('Gams file '+filename+' not found.')
 
     basepath = os.path.dirname(filename)
 

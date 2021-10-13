@@ -918,82 +918,82 @@ class GAMSExporter:
 
 
     def export_parameters_using_attributes (self, resources, datatype, res_type=None):
-            """Export scalars or descriptors.
-            """
-            islink = res_type == 'LINK'
-            counter_=0
-            attributes = []
-            attr_names = []
-            attr_outputs = []
-            for resource in resources:
-                for attr in resource.attributes:
-                    if attr.dataset_type == datatype and attr.is_var is False:
-                        translated_attr_name = translate_attr_name(attr.name)
-                        res = resource.get_attribute(attr_name=attr.name)
-                        attr.name = translated_attr_name
-                        if attr.name not in attr_names:
-                            attributes.append(attr)
-                            attr_names.append(attr.name)
+        """Export scalars or descriptors.
+        """
+        islink = res_type == 'LINK'
+        counter_=0
+        attributes = []
+        attr_names = []
+        attr_outputs = []
+        for resource in resources:
+            for attr in resource.attributes:
+                if attr.dataset_type == datatype and attr.is_var is False:
+                    translated_attr_name = translate_attr_name(attr.name)
+                    res = resource.get_attribute(attr_name=attr.name)
+                    attr.name = translated_attr_name
+                    if attr.name not in attr_names:
+                        attributes.append(attr)
+                        attr_names.append(attr.name)
 
-            ff='{0:<'+self.name_len+'}'
-            if datatype=="descriptor":
-                title="set"
+        ff='{0:<'+self.name_len+'}'
+        if datatype=="descriptor":
+            title="set"
+        else:
+            if res_type =='NETWORK':
+                title= "Scalar"
             else:
-                if res_type =='NETWORK':
-                    title= "Scalar"
-                else:
-                    title="Parameter"
+                title="Parameter"
 
-            for attribute in attributes:
-                if islink == True:
-                    if self.links_as_name:
-                        attr_outputs.append('\n'+title+' '+ attribute.name+'(link_name)\n')
+        for attribute in attributes:
+            if islink == True:
+                if self.links_as_name:
+                    attr_outputs.append('\n'+title+' '+ attribute.name+'(link_name)\n')
+                else:
+                    if self.use_jun ==True:
+                        attr_outputs.append('\n' + title + ' ' + attribute.name + '(i,jun_set,j)\n')
                     else:
-                        if self.use_jun ==True:
-                            attr_outputs.append('\n' + title + ' ' + attribute.name + '(i,jun_set,j)\n')
-                        else:
-                            attr_outputs.append('\n'+title+ ' '+ attribute.name+'(i,j)\n')
-                elif(res_type is 'NETWORK'):
-                    attr_outputs.append('\n'+title +' '+ attribute.name+'\n')
-                else:
-                    attr_outputs.append('\n'+title+' '+ attribute.name+'(i)\n')
+                        attr_outputs.append('\n'+title+ ' '+ attribute.name+'(i,j)\n')
+            elif(res_type is 'NETWORK'):
+                attr_outputs.append('\n'+title +' '+ attribute.name+'\n')
+            else:
+                attr_outputs.append('\n'+title+' '+ attribute.name+'(i)\n')
 
-                attr_outputs.append(ff.format('/'))
-                #attr_outputs.append(ff.format(0))
+            attr_outputs.append(ff.format('/'))
+            #attr_outputs.append(ff.format(0))
+            attr_outputs.append('\n')
+
+            for resource in resources:
+                attr = resource.get_attribute(attr_name=attribute.name)
+
+                if attr is None or attr.value is None or attr.dataset_type != datatype:
+                    continue
+                add = resource.name + "_" + attr.name
+                if add in self.added_pars:
+                    continue
+                counter_+=1
+                if islink:
+                    if self.links_as_name:
+                        attr_outputs.append(ff.format(resource.name+ '.'+resource.from_node+'.'+resource.to_node))
+                        attr_outputs.append(ff.format('\t'))
+                    else:
+                        if self.use_jun == True:
+                            jun = self.junc_node[resource.name]
+                            attr_outputs.append(ff.format(resource.from_node+' . '+jun+' . '+ resource.to_node))
+                        else:
+                            attr_outputs.append(ff.format(resource.gams_name))
+                elif(res_type is 'NETWORK'):
+                     pass
+                else:
+                    attr_outputs.append(ff.format(resource.name))
+
+                attr_outputs.append(ff.format(attr.value))
                 attr_outputs.append('\n')
 
-                for resource in resources:
-                    attr = resource.get_attribute(attr_name=attribute.name)
-
-                    if attr is None or attr.value is None or attr.dataset_type != datatype:
-                        continue
-                    add = resource.name + "_" + attr.name
-                    if add in self.added_pars:
-                        continue
-                    counter_+=1
-                    if islink:
-                        if self.links_as_name:
-                            attr_outputs.append(ff.format(resource.name+ '.'+resource.from_node+'.'+resource.to_node))
-                            attr_outputs.append(ff.format('\t'))
-                        else:
-                            if self.use_jun == True:
-                                jun = self.junc_node[resource.name]
-                                attr_outputs.append(ff.format(resource.from_node+' . '+jun+' . '+ resource.to_node))
-                            else:
-                                attr_outputs.append(ff.format(resource.gams_name))
-                    elif(res_type is 'NETWORK'):
-                         pass
-                    else:
-                        attr_outputs.append(ff.format(resource.name))
-
-                    attr_outputs.append(ff.format(attr.value))
-                    attr_outputs.append('\n')
-
-                attr_outputs.append(ff.format('/;\n'))
-            if(counter_>0):
-                return attr_outputs
-            else:
-                return []
+            attr_outputs.append(ff.format('/;\n'))
+        if(counter_>0):
+            return attr_outputs
+        else:
+            return []
 
     def export_descriptor_parameters_using_attributes(self, resources):
         """Export scalars or descriptors.
@@ -1141,7 +1141,7 @@ class GAMSExporter:
         for attribute in attributes:
             for resource in resources:
                 attr = resource.get_attribute(attr_name=attribute.name)
-                if (attr != None):
+                if attr is not None:
                     vv = json.loads(attr.value)
                     for key in vv.keys():
                         for date in vv[key].keys():
@@ -1156,134 +1156,136 @@ class GAMSExporter:
                     return
 
     def export_timeseries_using_attributes(self, resources, res_type=None):
-            """Export time series.
-            """
-            islink = res_type == 'LINK'
-            attributes = []
-            attr_names = []
-            attr_outputs = []
-            counter_ = 0
+        """Export time series.
+        """
+        islink = res_type == 'LINK'
+        attributes = []
+        attr_names = []
+        attr_outputs = []
+        counter_ = 0
 
-            # Identify all the timeseries attributes and unique attribute
-            # names
+        # Identify all the timeseries attributes and unique attribute
+        # names
+        for resource in resources:
+            for attr in resource.attributes:
+                if attr.dataset_type == 'timeseries' and attr.is_var is False:
+                    attr.name = translate_attr_name(attr.name)
+                    if attr.name not in attr_names:
+                        attributes.append(attr)
+                        attr_names.append(attr.name)
+
+        ff = '{0:<' + self.name_len + '}'
+        t_ = ff.format('')
+
+        for timestamp in self.time_index:
+            t_ = t_ + ff.format(self.times_table[timestamp])
+
+        for attribute in attributes:
+            if(self.time_axis is None):
+                raise HydraPluginError("Missing time axis or start date, end date and time step or bad format")
+
+            attr_outputs.append('\n*'+attribute.name)
+
+            if islink:
+                if self.links_as_name:
+                    attr_outputs.append('\nTable '+attribute.name + ' (link_name,i,j')
+                else:
+                    attr_outputs.append('\nTable '+attribute.name + ' (i,j')
+            else:
+                attr_outputs.append('\nTable '+attribute.name + ' (i')
+
+            if self.use_gams_date_index is True:
+                attr_outputs.append(', yr, mn, dy)\n')
+            else:
+                attr_outputs.append(', t)\n')
+
+            if self.links_as_name:
+                attr_outputs.append('\n'+ff.format(''))
+                attr_outputs.append(str(t_))
+            else:
+                attr_outputs.append('\n'+str(t_))
+
+            #Identify the datasets that we need data for
             for resource in resources:
-                for attr in resource.attributes:
-                    if attr.dataset_type == 'timeseries' and attr.is_var is False:
-                        attr.name = translate_attr_name(attr.name)
-                        if attr.name not in attr_names:
-                            attributes.append(attr)
-                            attr_names.append(attr.name)
+                attr = resource.get_attribute(attr_name=attribute.name)
 
-            ff = '{0:<' + self.name_len + '}'
-            t_ = ff.format('')
+                #Only interested in attributes with data and that are timeseries
+                if attr is None or attr.dataset_id is None or attr.dataset_type != "timeseries":
+                    continue
+                add = resource.name + "_" + attr.name
+                if add in self.added_pars:
+                    continue
+                counter_+=1
 
-            for timestamp in self.time_index:
-                t_ = t_ + ff.format(self.times_table[timestamp])
+                #Pass in the JSON value and the list of timestamps,
+                #Get back a dictionary with values, keyed on the timestamps
+                try:
+                    all_data = self.get_time_value(attr.value, self.time_index)
+                except Exception as e:
+                    log.exception(e)
+                    all_data = None
 
-            for attribute in attributes:
-                if(self.time_axis is None):
-                    raise HydraPluginError("Missing time axis or start date, end date and time step or bad format")
-
-                attr_outputs.append('\n*'+attribute.name)
-
+                if all_data is None:
+                    raise HydraPluginError("Error finding value attribute %s on"
+                                          "resource %s"%(attr.name, resource.name))
                 if islink:
                     if self.links_as_name:
-                        attr_outputs.append('\nTable '+attribute.name + ' (link_name,i,j')
+                        attr_outputs.append('\n'+ff.format(resource.name+ '.'+resource.from_node+'.'+resource.to_node))
+                        attr_outputs.append(ff.format('\t'))
+
                     else:
-                        attr_outputs.append('\nTable '+attribute.name + ' (i,j')
+                        attr_outputs.append('\n'+ff.format(resource.gams_name))
                 else:
-                    attr_outputs.append('\nTable '+attribute.name + ' (i')
+                    attr_outputs.append('\n'+ff.format(resource.name))
 
-                if self.use_gams_date_index is True:
-                    attr_outputs.append(', yr, mn, dy)\n')
-                else:
-                    attr_outputs.append(', t)\n')
+                #Get each value in turn and add it to the line
+                for timestamp in self.time_index:
+                    tmp = all_data[timestamp]
 
-                if self.links_as_name:
-                    attr_outputs.append('\n'+ff.format(''))
-                    attr_outputs.append(str(t_))
-                else:
-                    attr_outputs.append('\n'+str(t_))
-
-                #Identify the datasets that we need data for
-                for resource in resources:
-                    attr = resource.get_attribute(attr_name=attribute.name)
-
-                    #Only interested in attributes with data and that are timeseries
-                    if attr is None or attr.dataset_id is None or attr.dataset_type != "timeseries":
-                        continue
-                    add = resource.name + "_" + attr.name
-                    if add in self.added_pars:
-                        continue
-                    counter_+=1
-
-                    #Pass in the JSON value and the list of timestamps,
-                    #Get back a dictionary with values, keyed on the timestamps
-                    try:
-                        all_data = self.get_time_value(attr.value, self.time_index)
-                    except Exception as e:
-                        log.exception(e)
-                        all_data = None
-
-                    if all_data is None:
-                        raise HydraPluginError("Error finding value attribute %s on"
-                                              "resource %s"%(attr.name, resource.name))
-                    if islink:
-                        if self.links_as_name:
-                            attr_outputs.append('\n'+ff.format(resource.name+ '.'+resource.from_node+'.'+resource.to_node))
-                            attr_outputs.append(ff.format('\t'))
-
-                        else:
-                            attr_outputs.append('\n'+ff.format(resource.gams_name))
+                    if isinstance(tmp, list):
+                        data="-".join(tmp)
+                        ff_='{0:<'+self.array_len+'}'
+                        data_str = ff_.format(str(data))
                     else:
-                        attr_outputs.append('\n'+ff.format(resource.name))
-
-                    #Get each value in turn and add it to the line
-                    for timestamp in self.time_index:
-                        tmp = all_data[timestamp]
-
-                        if isinstance(tmp, list):
-                            data="-".join(tmp)
-                            ff_='{0:<'+self.array_len+'}'
-                            data_str = ff_.format(str(data))
-                        else:
-                            data=str(tmp)
-                            data_str = ff.format(str(float(data)))
-                        attr_outputs.append(data_str)
-
-                attr_outputs.append('\n')
+                        data=str(tmp)
+                        data_str = ff.format(str(float(data)))
+                    attr_outputs.append(data_str)
 
             attr_outputs.append('\n')
-            if(counter_>0):
-                return attr_outputs
-            else:
-                return []
+
+        attr_outputs.append('\n')
+        if counter_> 0:
+            return attr_outputs
+        else:
+            return []
 
     def export_default_values(self):
-            """Export any values which have been set as default values in the template
-            but which are not present in the network data.
-            """
-            attr_outputs = []
-            if not self.default_dict:
-                log.info("No default values to write")
-                return attr_outputs
-
-            used_attribute_names = []
-            for resource in self.network.links:
-                for attr in resource.attributes:
-                    if attr.name not in used_attribute_names:
-                        used_attribute_names.append(attr.name)
-            for resource in self.network.nodes:
-                for attr in resource.attributes:
-                    if attr.attr_id not in used_attribute_names:
-                        used_attribute_names.append(attr.name)
-
-            values_to_write = set(self.default_dict) - set(used_attribute_names)
-
-            for value_to_write in values_to_write:
-                attr_outputs.append(self.default_dict[value_to_write])
-                attr_outputs.append('\n')
+        """Export any values which have been set as default values in the template
+        but which are not present in the network data.
+        """
+        attr_outputs = []
+        if not self.default_dict:
+            log.info("No default values to write")
             return attr_outputs
+
+        used_attribute_names = []
+        for resource in self.network.links:
+            for attr in resource.attributes:
+                if attr.name not in used_attribute_names:
+                    used_attribute_names.append(attr.name)
+        for resource in self.network.nodes:
+            for attr in resource.attributes:
+                if attr.name == 'L_use_Q':
+                    import pudb; pudb.set_trace()
+                if attr.attr_id not in used_attribute_names:
+                    used_attribute_names.append(attr.name)
+
+        values_to_write = set(self.default_dict) - set(used_attribute_names)
+
+        for value_to_write in values_to_write:
+            attr_outputs.append(self.default_dict[value_to_write])
+            attr_outputs.append('\n')
+        return attr_outputs
 
 
     def get_time_value(self, value, timestamps):
@@ -1893,33 +1895,36 @@ class GAMSExporter:
                 else:
                     line=resource.name
             for set in set_collections:
-                    if(islink ==True):
-                        if set== 'to_NODE_type':
-                            tt=self.network.get_node(node_name=resource.to_node).get_type_by_template(self.template_id)
-                            if line:
-                                line = line + ' . '+tt.name
-                            else:
-                                line=tt
-                        elif  set == 'from_NODE_type':
-                            tt=self.network.get_node(node_name=resource.from_node).get_type_by_template(self.template_id)
-                            if line:
-                                line = line + ' . '+tt.name
-                            else:
-                                line=tt
-                        elif set == 'links_types':
-                            tt=self.network.get_link(link_name=resource.name).get_type_by_template(self.template_id)
-                            if line:
-                                line = line + ' . ' + tt.name
-                            else:
-                                line = tt
+                if(islink ==True):
+                    if set== 'to_NODE_type':
+                        tt=self.network.get_node(node_name=resource.to_node).get_type_by_template(self.template_id)
+                        if line:
+                            line = line + ' . '+tt.name
                         else:
-                            tt=resource.get_attribute(attr_name=set)
-                            if tt==None:
-                                break
-                            if line:
+                            line=tt
+                    elif  set == 'from_NODE_type':
+                        tt=self.network.get_node(node_name=resource.from_node).get_type_by_template(self.template_id)
+                        if line:
+                            line = line + ' . '+tt.name
+                        else:
+                            line=tt
+                    elif set == 'links_types':
+                        tt=self.network.get_link(link_name=resource.name).get_type_by_template(self.template_id)
+                        if line:
+                            line = line + ' . ' + tt.name
+                        else:
+                            line = tt
+                    else:
+                        tt=resource.get_attribute(attr_name=set)
+                        if tt==None:
+                            break
+                        if line:
+                            try:
                                 line=line+' . '+tt.value
-                            else:
-                                line =  tt.value
+                            except:
+                                import pudb; pudb.set_trace()
+                        else:
+                            line =  tt.value
             if(line):
                  attr_outputs.append(line)
 
@@ -2021,9 +2026,9 @@ class GAMSExporter:
                                     i+=1
                                     for value in item:
                                         if c is 0:
-                                           attr_outputs.append('{0:15}'.format(value))
+                                            attr_outputs.append('{0:15}'.format(value))
                                         else:
-                                             attr_outputs.append('{0:20}'.format(value))
+                                            attr_outputs.append('{0:20}'.format(value))
                                         c+=1
                                 else:
                                     #attr_outputs.append(format(str(i)))
@@ -2086,7 +2091,7 @@ class GAMSExporter:
                 t=t+'/\n\n'
                 t=t+'SETS\n dy  /\n'
                 for day in days:
-                      t=t+str(day)+'\n'
+                    t=t+str(day)+'\n'
                 #t=t+'/\n\n'
                 time_index = [t+'\n\n']####', '* Time index\n','t(yr, mn, dy)  time index /\n']
             else:
@@ -2096,11 +2101,11 @@ class GAMSExporter:
             for date in self.time_axis:
                 self.time_index.append(date)
                 if self.use_gams_date_index is True:
-                     _t=str(date.year)+" . "+str(date.month)+" . "+str(date.day)
-                     self.times_table[date]=_t
+                    t=str(date.year)+" . "+str(date.month)+" . "+str(date.day)
+                    self.times_table[date]=_t
                 else:
-                     time_index.append('%s\n' % t)
-                     self.times_table[date]=t
+                    time_index.append('%s\n' % t)
+                    self.times_table[date]=t
                 t += 1
 
             time_index.append('/\n\n')

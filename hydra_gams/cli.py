@@ -99,6 +99,11 @@ def import_results(obj, network_id, scenario_id, gms_file, gdx_file, user_id):
 
     client = get_logged_in_client(obj, user_id=user_id)
 
+    try:
+        gdx_file = gdx_file.split(",")
+    except:
+        pass
+
     importer.import_data(network_id,
                          scenario_id,
                          gms_file,

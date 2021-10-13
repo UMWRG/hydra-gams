@@ -37,11 +37,10 @@ def import_data(network_id,
     """
         Import results from a GDX file into a network
     """
-    gdximport = GAMSImporter(network_id,
-                             scenario_id,
+    gdximport = GAMSImporter(scenario_id,
                              gms_file,
                              gdx_file,
-                             gams_path=gams_path,
+#                             gams_path=gams_path,
                              db_url=db_url,
                              connection=connection)
     gdximport.import_data()
@@ -133,7 +132,6 @@ class GAMSImporter:
 
         self.network = network
         self.res_scenarios = []
-        self.attrs = dict()
         self.time_axis = dict()
 
         self.gms_file = gms_file
@@ -155,8 +153,7 @@ class GAMSImporter:
             self.connection = connection
 
         attrslist = self.connection.get_attributes()
-        for attr in attrslist:
-            self.attrs.update({attr.id: attr.name})
+        self.attrs = {attr.id:attr.name for attr in attrslist}
 
     def write_progress(self, step=None):
         """
@@ -251,6 +248,7 @@ class GAMSImporter:
             pass
         if scenario_id is None:
             raise HydraPluginError("No scenario specified.")
+
 
         self.network = self.connection.get_network(network_id=int(self.network_id),
                                           template_id=self.template_id,
