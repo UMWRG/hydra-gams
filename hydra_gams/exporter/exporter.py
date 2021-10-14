@@ -1275,8 +1275,6 @@ class GAMSExporter:
                     used_attribute_names.append(attr.name)
         for resource in self.network.nodes:
             for attr in resource.attributes:
-                if attr.name == 'L_use_Q':
-                    import pudb; pudb.set_trace()
                 if attr.attr_id not in used_attribute_names:
                     used_attribute_names.append(attr.name)
 
