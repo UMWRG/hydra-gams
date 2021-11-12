@@ -964,6 +964,15 @@ class GAMSImporter:
                         val = {key: data[i]}
                         elements[col] = val
 
+                if len(index[i]) == 4 and index[i][1].strip().lower() == res.strip().lower():
+                    col = "%s.%s" % (index[i][2], idx)
+                    key = index[i][3]
+                    if col in elements:
+                        elements[col][key] = data[i]
+                    else:
+                        val = {key: data[i]}
+                        elements[col] = val
+
                 elif len(index[i]) == 3 and index[i][1].strip().lower() == res.strip().lower():
                     elements[idx] = {index[i][1]: data[i]}
 
