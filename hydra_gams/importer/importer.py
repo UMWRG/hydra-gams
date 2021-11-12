@@ -528,6 +528,9 @@ class GAMSImporter:
                             MGA_values[j]= self.create_timeseries(index, data)
 
                         elif gdxvar.dim == 1:
+                            if len(gdxvar.data) == 0:
+                                MGA_values = {"0":{"0": 0}}
+                                continue
                             data = gdxvar.data[j]
                             if not MGA_values:
                                 MGA_values = {"0":{}}
@@ -536,6 +539,7 @@ class GAMSImporter:
                                 MGA_values["0"][j] = data
                             except ValueError:
                                 MGA_values["0"][j] = data
+
                         elif gdxvar.dim > 0 :
                             dataset['type'] = 'dataframe'
                             MGA_values.update(self.create_dataframe_from_mga_results(j, self.MGA_index[j], gdxvar.index, gdxvar.data))
