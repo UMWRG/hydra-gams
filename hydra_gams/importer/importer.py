@@ -139,8 +139,9 @@ class GAMSImporter:
 
         self.network_id=network.id if network is not None else None
 
-        self.scenario_id=scenario_id
-        self.template_id=None
+        self.scenario_id = scenario_id
+        self.template_id = None
+        self.scenario = None
 
         self.gms_data = []
 
@@ -170,8 +171,8 @@ class GAMSImporter:
 
     def import_data(self):
 
-        errors      = []
-        message="Import successful."
+        errors = []
+        message = "Import successful."
         try:
             check_gams_installation()
             self.write_progress()
@@ -251,8 +252,8 @@ class GAMSImporter:
 
 
         self.network = self.connection.get_network(network_id=int(self.network_id),
-                                          template_id=self.template_id,
-                                          scenario_ids=[self.scenario_id])
+                                          template_id = self.template_id,
+                                          scenario_ids = [self.scenario_id])
 
         if(is_licensed is False):
             if len(self.network.nodes)>20:
@@ -263,8 +264,8 @@ class GAMSImporter:
         """
            Load network and scenario from the server.
         """
-        self.is_licensed=is_licensed
-        self.network =network
+        self.is_licensed = is_licensed
+        self.network = network
         if(is_licensed is False):
             if len(self.network.nodes)>20:
                 raise HydraPluginError("The licence is limited demo (maximum limits are 20 nodes and 20 times steps).  Please contact software vendor (hydraplatform1@gmail.com) to get a full licence")
@@ -539,7 +540,6 @@ class GAMSImporter:
                                 MGA_values["0"][j] = data
                             except ValueError:
                                 MGA_values["0"][j] = data
-
                         elif gdxvar.dim > 0 :
                             dataset['type'] = 'dataframe'
                             MGA_values.update(self.create_dataframe_from_mga_results(j, self.MGA_index[j], gdxvar.index, gdxvar.data))
@@ -1023,5 +1023,7 @@ class GAMSImporter:
 
     def save(self):
         log.info("Saving")
+        #first delete the old results
+        self.connection.delete_scenario_results(self.scenario_id)
         #Make this empty to avoid potential updates, and to save on work in Hydra
         self.connection.update_resourcedata(self.scenario_id, self.res_scenarios)
