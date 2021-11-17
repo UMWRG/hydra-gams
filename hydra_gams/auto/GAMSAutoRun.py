@@ -1,5 +1,6 @@
 #(c) Copyright 2013, 2014, 2015 University of Manchester\
 import os
+import sys
 import time
 import logging
 from datetime import datetime
@@ -99,7 +100,7 @@ def register():
 
     LOG.info("GAMS Auto Run App Registered. ")
 
-def run_gams_model(gms_file, debug=False, data_dir='/tmp'):
+def run_gams_model(gms_file, debug=False):
     """
         Run a gams model using the supplied GMS file.
     """
@@ -109,7 +110,7 @@ def run_gams_model(gms_file, debug=False, data_dir='/tmp'):
     if working_directory == '':
         working_directory = '.'
 
-    model = GamsModel(working_directory, debug, data_dir=data_dir)
+    model = GamsModel(working_directory, debug)
     model_job = model.add_job(gms_file)
     write_output("Running GAMS model, please note that this may take time")
     model.run()
@@ -162,7 +163,6 @@ def export_run_import(client,
                       export_by_type=None,
                       gams_date_time_index=None,
                       debug=False,
-                      data_dir = '/tmp',
                       default_dict = {},
                       settings_text=''):
     """
@@ -195,7 +195,7 @@ def export_run_import(client,
 
         exporter.export()
 
-        model_gdx_file = run_gams_model(gms_file, debug=debug, data_dir=data_dir)
+        model_gdx_file = run_gams_model(gms_file, debug=debug)
 
         importer = GAMSImporter(scenario_id,
                                 gms_file,
@@ -225,7 +225,13 @@ def export_run_import(client,
     write_progress(steps, steps)
 
 
-    if len(errors) > 0:
-        raise Exception("An Error occurred running the Model. ")
+#    if len(errors) > 0:#
+        #raise Exception("An Error occurred running the Model. ")
 
-    text = create_xml_response('GAMSAuto', exporter.network.id, [scenario_id], message=message, errors=errors)
+    #text = create_xml_response('GAMSAuto', exporter.network.id, [scenario_id], message=message, errors=errors)
+
+    #print(text)
+
+    if len(errors) > 0:
+        write_output(errors[0].message)
+        sys.exit(errors[0].message)
