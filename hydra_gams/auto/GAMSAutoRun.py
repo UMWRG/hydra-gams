@@ -100,7 +100,7 @@ def register():
 
     LOG.info("GAMS Auto Run App Registered. ")
 
-def run_gams_model(gms_file, debug=False):
+def run_gams_model(gms_file, debug=False, data_dir='/tmp'):
     """
         Run a gams model using the supplied GMS file.
     """
@@ -110,7 +110,7 @@ def run_gams_model(gms_file, debug=False):
     if working_directory == '':
         working_directory = '.'
 
-    model = GamsModel(working_directory, debug)
+    model = GamsModel(working_directory, debug, data_dir=data_dir)
     model_job = model.add_job(gms_file)
     write_output("Running GAMS model, please note that this may take time")
     model.run()
@@ -164,7 +164,8 @@ def export_run_import(client,
                       gams_date_time_index=None,
                       debug=False,
                       default_dict = {},
-                      settings_text=''):
+                      settings_text=''
+                      data_dir='/tmp'):
     """
         1. Export a hydra network to a GAMS input text file
         2. Run the specified model, using the newly created input file
@@ -195,7 +196,7 @@ def export_run_import(client,
 
         exporter.export()
 
-        model_gdx_file = run_gams_model(gms_file, debug=debug)
+        model_gdx_file = run_gams_model(gms_file, debug=debug, data_dir=data_dir)
 
         importer = GAMSImporter(scenario_id,
                                 gms_file,
