@@ -2,6 +2,7 @@
 
 import os
 import sys
+import shutil
 import logging
 
 from hydra_client.resources import HydraResource, HydraNetwork
@@ -19,10 +20,12 @@ if (sys.version_info > (3, 0)):
 
 
 class GamsModel(object):
-    def __init__(self, working_directory, turn_debug_on):
+    def __init__(self, working_directory, turn_debug_on, data_dir='/tmp'):
         gamspath=get_gams_path()
-
+        self.working_directory = working_directory
+        self.data_dir = data_dir
         log.info("Using GAMS Path: %s", gamspath)
+        self.lst_name = '_gams_py_gjo0.lst'
         try:
             real_path = os.path.realpath(os.path.abspath(gamspath))
             api_path = os.path.join(real_path,'apifiles','Python','api'+python_version_prefix)
@@ -150,7 +153,23 @@ class GamsModel(object):
         run the GAMS model
         and raise an error if something going wrong
         '''
-        self.job.run(checkpoint=self.cp)#, gams_options=options.ESol#print)
+        from gams import  workspace
+        lst_location = os.path.join(self.working_directory, self.lst_name)
+        try:
+            self.job.run(checkpoint=self.cp)#, gams_options=options.ESol#print)
+            if os.path.exists(lst_location):
+                shutil.copyfile(lst_location, os.path.join(self.data_dir, self.lst_name))
+        except workspace.GamsExceptionExecution as e:
+            if os.path.exists(lst_location):
+                shutil.copyfile(lst_location, os.path.join(self.data_dir, self.lst_name))
+
+            if e.rc == 3:
+                raise HydraPluginError("An exception occurred when executing the model. This is most likely caused by infeasibility.")
+            elif e.rc == 2:
+                raise HydraPluginError("There was a compilation error with the model. Please check the native output file for more details.")
+            else:
+                raise HydraPluginError("An unknown has occurred running the model. Please check the native output file for more details.")
+
         if self.model_name is not None:
             try:
                 status=self.job.out_db["ms"].find_record().value
@@ -370,6 +389,3 @@ def check_lic():
         return lic.is_licensed()
     else:
         return True
-
-
-
