@@ -164,7 +164,7 @@ def export_run_import(client,
                       gams_date_time_index=None,
                       debug=False,
                       default_dict = {},
-                      settings_text=''
+                      settings_text='',
                       data_dir='/tmp'):
     """
         1. Export a hydra network to a GAMS input text file
