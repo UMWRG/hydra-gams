@@ -1360,7 +1360,7 @@ class GAMSExporter:
                     ids[attr.name][resource] = self.resourcescenarios_ids[attr.resource_attr_id]
 
                     if attr.name not in data_types:
-                        metadata = self.resourcescenarios_ids[attr.resource_attr_id].value.metadata
+                        metadata = self.resourcescenarios_ids[attr.resource_attr_id].dataset.metadata
                         log.debug(metadata)
                         if "type" in metadata:
                             data_types[attr.name]=metadata["type"].lower()
@@ -1645,7 +1645,7 @@ class GAMSExporter:
                     ids[attr.name][resource] = self.resourcescenarios_ids[attr.resource_attr_id]
 
                     if attr.name not in data_types:
-                        type_ = self.resourcescenarios_ids[attr.resource_attr_id].value.metadata
+                        type_ = self.resourcescenarios_ids[attr.resource_attr_id].dataset.metadata
                         if "type" in type_:
                             data_types[attr.name] = type_["type"].lower()
                         else:
