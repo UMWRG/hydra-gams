@@ -1825,7 +1825,7 @@ class GAMSExporter:
                 add = resource.name + "_" + attribute_name
                 if not add in self.added_pars:
                     self.added_pars.append(add)
-                value_ = (rs.dataset.value)
+                value_ = str(rs.dataset.value)
                 if islink:
                     if self.links_as_name:
                         attr_outputs.append(
