@@ -10,9 +10,8 @@ from operator import mul
 
 from hydra_base.exceptions import HydraPluginError
 from hydra_base.util.hydra_dateutil import ordinal_to_timestamp, date_to_string
-from hydra_client.plugin import JSONPlugin
 
-from hydra_gams.lib import import_gms_data, get_gams_path, check_gams_installation
+from hydra_gams.lib import import_gms_data
 
 from hydra_client.output import write_progress, write_output, create_xml_response
 
@@ -21,9 +20,7 @@ from hydra_client.connection import JSONConnection
 import logging
 log = logging.getLogger(__name__)
 
-from hydra_base.lib.objects import JSONObject
-
-gdxcc=None
+gdx=None
 
 
 def import_data(network_id,
@@ -48,14 +45,14 @@ def import_data(network_id,
 def get_gdx_files(filename):
     if filename is None:
         raise HydraPluginError("gdx file not specified.")
-    import gdxcc
+    from gams.core import gdx
 
     filename = os.path.abspath(filename)
-    gdx_handle=gdxcc.new_gdxHandle_tp()
-    gdxcc.gdxOpenRead(gdx_handle, filename)
+    gdx_handle=gdx.new_gdxHandle_tp()
+    gdx.gdxOpenRead(gdx_handle, filename)
 
     x, symbol_count, element_count = \
-        gdxcc.gdxSystemInfo(gdx_handle)
+        gdx.gdxSystemInfo(gdx_handle)
 
     if x != 1:
         raise HydraPluginError('GDX file could not be opened.')
@@ -92,32 +89,32 @@ class GDXvariable(object):
         self.domain=json.dumps(_domain)
 
 def get_index(index_file_names):
-    import gdxcc
-    gdx_handle = gdxcc.new_gdxHandle_tp()
-    rc = gdxcc.gdxCreate(gdx_handle, gdxcc.GMS_SSSIZE)
-    gdxcc.gdxOpenRead(gdx_handle, index_file_names)
+    from gams.core import gdx
+    gdx_handle = gdx.new_gdxHandle_tp()
+    rc = gdx.gdxCreate(gdx_handle, gdx.GMS_SSSIZE)
+    gdx.gdxOpenRead(gdx_handle, index_file_names)
     x, symbol_count, element_count = \
-        gdxcc.gdxSystemInfo(gdx_handle)
+        gdx.gdxSystemInfo(gdx_handle)
     for i in range(symbol_count):
         gdx_variable = GDXvariable()
-        info = gdxcc.gdxSymbolInfo(gdx_handle, i + 1)
-        extinfo = gdxcc.gdxSymbolInfoX(gdx_handle, i + 1)
+        info = gdx.gdxSymbolInfo(gdx_handle, i + 1)
+        extinfo = gdx.gdxSymbolInfoX(gdx_handle, i + 1)
         gdx_variable.set_info(info, extinfo)
-        gdxcc.gdxDataReadStrStart(gdx_handle, i + 1)
+        gdx.gdxDataReadStrStart(gdx_handle, i + 1)
         MGA_index = []
         for n in range(gdx_variable.records):
-            x, idx, data, y = gdxcc.gdxDataReadStr(gdx_handle)
+            x, idx, data, y = gdx.gdxDataReadStr(gdx_handle)
             MGA_index.append(idx[0])
         return MGA_index
 
 
 class GAMSImporter:
     def __init__(self, scenario_id, gms_file, gdx_file, gams_path=None, connection=None, db_url=None, network=None):
-        import gdxcc
-        self.gdxcc=gdxcc
-        self.gdx_handle = gdxcc.new_gdxHandle_tp()
+        from gams.core import gdx
+        self.gdx=gdx
+        self.gdx_handle = gdx.new_gdxHandle_tp()
         log.info("1 =========================>"+str(self.gdx_handle))
-        rc = gdxcc.gdxCreate(self.gdx_handle, gdxcc.GMS_SSSIZE)
+        rc = gdx.gdxCreate(self.gdx_handle, gdx.GMS_SSSIZE)
         log.info("2 =============================>"+ str(rc))
         if rc[0] == 0:
             raise HydraPluginError('Could not find GAMS installation.')
@@ -174,7 +171,6 @@ class GAMSImporter:
         errors = []
         message = "Import successful."
         try:
-            check_gams_installation()
             self.write_progress()
 
             self.load_network()
@@ -273,19 +269,19 @@ class GAMSImporter:
     def get_mga_index(self, index_file_names):
         self.MGA_index=get_index(index_file_names)
         '''
-        self.gdxcc.gdxOpenRead(self.gdx_handle, index_file_names)
+        self.gdx.gdxOpenRead(self.gdx_handle, index_file_names)
         x, symbol_count, element_count = \
-            self.gdxcc.gdxSystemInfo(self.gdx_handle)
+            self.gdx.gdxSystemInfo(self.gdx_handle)
 
         for i in range(symbol_count):
             gdx_variable = GDXvariable()
-            info = self.gdxcc.gdxSymbolInfo(self.gdx_handle, i + 1)
-            extinfo = self.gdxcc.gdxSymbolInfoX(self.gdx_handle, i + 1)
+            info = self.gdx.gdxSymbolInfo(self.gdx_handle, i + 1)
+            extinfo = self.gdx.gdxSymbolInfoX(self.gdx_handle, i + 1)
             gdx_variable.set_info(info, extinfo)
-            self.gdxcc.gdxDataReadStrStart(self.gdx_handle, i + 1)
+            self.gdx.gdxDataReadStrStart(self.gdx_handle, i + 1)
             self.MGA_index=[]
             for n in range(gdx_variable.records):
-                x, idx, data, y = self.gdxcc.gdxDataReadStr(self.gdx_handle)
+                x, idx, data, y = self.gdx.gdxDataReadStr(self.gdx_handle)
                 self.MGA_index.append(idx[0])
         '''
 
@@ -312,10 +308,10 @@ class GAMSImporter:
         else:
             self.is_MGA = False
         #filename = os.path.abspath(filename)
-        self.gdxcc.gdxOpenRead(self.gdx_handle, os.path.expanduser(self.gdx_file))
+        self.gdx.gdxOpenRead(self.gdx_handle, os.path.expanduser(self.gdx_file))
 
         x, self.symbol_count, self.element_count = \
-            self.gdxcc.gdxSystemInfo(self.gdx_handle)
+            self.gdx.gdxSystemInfo(self.gdx_handle)
         if x != 1:
             raise HydraPluginError('GDX file could not be opened.')
         log.info('Importing %s symbols and %s elements.' %
@@ -329,19 +325,19 @@ class GAMSImporter:
 
         log.info("Reading GDX Data")
 
-        self.gdxcc.gdxOpenRead(self.gdx_handle, self.gdx_file)
+        self.gdx.gdxOpenRead(self.gdx_handle, self.gdx_file)
 
         for i in range(self.symbol_count):
             gdx_variable = GDXvariable()
 
-            info = self.gdxcc.gdxSymbolInfo(self.gdx_handle, i + 1)
-            extinfo = self.gdxcc.gdxSymbolInfoX(self.gdx_handle, i + 1)
-            var_domain = self.gdxcc.gdxSymbolGetDomainX(self.gdx_handle, i + 1)
+            info = self.gdx.gdxSymbolInfo(self.gdx_handle, i + 1)
+            extinfo = self.gdx.gdxSymbolInfoX(self.gdx_handle, i + 1)
+            var_domain = self.gdx.gdxSymbolGetDomainX(self.gdx_handle, i + 1)
             gdx_variable.set_info(info, extinfo, var_domain)
-            self.gdxcc.gdxDataReadStrStart(self.gdx_handle, i + 1)
+            self.gdx.gdxDataReadStrStart(self.gdx_handle, i + 1)
 
             for n in range(gdx_variable.records):
-                x, idx, data, y = self.gdxcc.gdxDataReadStr(self.gdx_handle)
+                x, idx, data, y = self.gdx.gdxDataReadStr(self.gdx_handle)
                 gdx_variable.index.append(idx)
                 gdx_variable.data.append(data[0])
             self.gdx_variables.update({gdx_variable.name: gdx_variable})
@@ -399,7 +395,7 @@ class GAMSImporter:
             elif line.strip().startswith('Parameter timestamp(t)'):
                 time_index_type='t_index'
                 break
-        if time_index_type is "t_index":
+        if time_index_type == "t_index":
             i += 2
             line = self.gms_data[i]
             while line.split('(', 1)[0].strip() == 'timestamp':
@@ -409,7 +405,7 @@ class GAMSImporter:
                 self.time_axis.update({idx: timestamp})
                 i += 1
                 line = self.gms_data[i]
-        elif time_index_type is "date":
+        elif time_index_type == "date":
            i += 2
            line = self.gms_data[i]
            while line.strip().startswith("timestamp"):
@@ -445,7 +441,7 @@ class GAMSImporter:
 
         while line.strip() != ';':
 
-            if len(line.strip()) is 0:
+            if len(line.strip()) == 0:
                 break
             var = line.split()[0]
             splitvar = var.split('(', 1)
@@ -503,27 +499,26 @@ class GAMSImporter:
             if attr.attr_is_var == 'Y':
                 MGA_values = {}
                 metadata = {}
-                dataset = {}
+                dataset = {'unit_id': None, 'locked': 'N'}
                 _key =self.get_key(self.attrs[attr.attr_id] ,self.gdx_variables)
                 if _key!=None:
                     for j in range(len(self.MGA_index)):
 
                         gdxvar = self.gdx_variables[_key]
                         dataset ['name']= gdxvar.name
-                        dataset ['name']= gdxvar.name
 
-                        if (gdxvar.name in self.gams_units):
-                            dataset['unit'] = self.gams_units[gdxvar.name]
-                        else:
-                            dataset['unit'] = '-'
+                        # if (gdxvar.name in self.gams_units):
+                        #     dataset['unit'] = self.gams_units[gdxvar.name]
+                        # else:
+                        #     dataset['unit'] = '-'
                         if gdxvar.name in self.gdx_ts_vars.keys():
                             dataset['type'] = 'timeseries'
                             index = []
                             count = 0
                             for idx in gdxvar.index:
-                                if len(idx) is 2:
+                                if len(idx) == 2:
                                     index.append(idx[self.gdx_ts_vars[gdxvar.name]])
-                                elif len(idx) is 3:
+                                elif len(idx) == 3:
                                     index.append('.'.join(map(str, idx)))
                             data = gdxvar.data
                             MGA_values[j]= self.create_timeseries(index, data)
@@ -552,7 +547,7 @@ class GAMSImporter:
                     metadata["sol_type"] = "MGA"
                     if gdxvar.var_domain!=None:
                         metadata['domain']=gdxvar.domain
-                    dataset['metadata'] = metadata
+                    dataset['metadata'] = json.dumps(metadata)
                     res_scen = dict(resource_attr_id=attr.id,
                                     attr_id=attr.attr_id,
                                     dataset=dataset)
@@ -565,26 +560,27 @@ class GAMSImporter:
                 if attr.attr_is_var == 'Y':
                     MGA_values = {}
                     metadata = {}
-                    dataset = {}
+                    dataset = {'unit_id': None, 'locked': 'N'}
+
                     _key = self.get_key(self.attrs[attr.attr_id], self.gdx_variables)
                     if _key is not None:
                         for j in range(len(self.MGA_index)):
                             gdxvar = self.gdx_variables[_key]
                             dataset['name']= gdxvar.name
 
-                            if (gdxvar.name in self.gams_units):
-                                dataset['unit'] = self.gams_units[gdxvar.name]
-                            else:
-                                dataset['unit'] = '-'
+                            # if (gdxvar.name in self.gams_units):
+                            #     dataset['unit'] = self.gams_units[gdxvar.name]
+                            # else:
+                            #     dataset['unit'] = '-'
                             if gdxvar.name in self.gdx_ts_vars.keys():
                                 dataset['type'] = 'timeseries'
                                 index = []
                                 data = []
                                 for i, idx in enumerate(gdxvar.index):
                                     if node.name in idx:
-                                        if len(idx) is 4:
+                                        if len(idx) == 4:
                                             index.append('.'.join(map(str, idx[1:])))
-                                        elif len(idx) is 2:
+                                        elif len(idx) == 2:
                                             index.append(idx[self.gdx_ts_vars[gdxvar.name]])
                                         data.append(gdxvar.data[i])
                                 #dataset['value'] = self.create_timeseries(index, data)
@@ -615,7 +611,7 @@ class GAMSImporter:
                         dataset['value']=json.dumps(MGA_values)
 
                         dataset['type'] = 'dataframe'
-                        dataset['metadata'] = metadata
+                        dataset['metadata'] = json.dumps(metadata)
                         res_scen = dict(resource_attr_id=attr.id,
                                         attr_id=attr.attr_id,
                                         dataset=dataset)
@@ -627,8 +623,7 @@ class GAMSImporter:
 
                     MGA_values = {}
                     metadata = {}
-                    dataset = {}
-
+                    dataset = {'unit_id': None, 'locked': 'N'}
                     _key =self.get_key(self.attrs[attr.attr_id] ,self.gdx_variables)
                     if _key!=None:
                         fromnode = nodes[link.node_1_id]
@@ -637,10 +632,10 @@ class GAMSImporter:
                             #dataset['value']=MGA_values
                             gdxvar = self.gdx_variables[self.attrs[attr.attr_id]]
                             dataset['name']=gdxvar.name
-                            if (gdxvar.name in self.gams_units):
-                                dataset['unit'] = self.gams_units[gdxvar.name]
-                            else:
-                                dataset['unit'] = '-'
+                            # if (gdxvar.name in self.gams_units):
+                            #     dataset['unit'] = self.gams_units[gdxvar.name]
+                            # else:
+                            #     dataset['unit'] = '-'
                             if gdxvar.name in self.gdx_ts_vars.keys():
                                 dataset['type'] = 'timeseries'
                                 index = []
@@ -648,9 +643,9 @@ class GAMSImporter:
                                 for i, idx in enumerate(gdxvar.index):
                                     if fromnode in idx and tonode in idx and \
                                                     idx.index(fromnode) < idx.index(tonode):
-                                        if len(idx) is 5:
+                                        if len(idx) == 5:
                                             index.append('.'.join(map(str, idx[2:])))
-                                        elif len(idx) is 3:
+                                        elif len(idx) == 3:
                                             index.append(idx[self.gdx_ts_vars[gdxvar.name]])
                                         data.append(gdxvar.data[i])
                                 MGA_values[j]=self.create_timeseries(index, data)
@@ -700,32 +695,33 @@ class GAMSImporter:
                         metadata["sol_type"] = "MGA"
                         if gdxvar.var_domain != None:
                             metadata['domain'] = gdxvar.domain
-                        dataset['metadata'] = metadata
+                        dataset['metadata'] = json.dumps(metadata)
                         res_scen = dict(resource_attr_id=attr.id,
                                         attr_id=attr.attr_id,
                                         dataset=dataset)
                         self.res_scenarios.append(res_scen)
 
     def attr_data_for_single_sol(self):  # Network attributes
+
         for attr in self.network.attributes:
             if attr.attr_is_var == 'Y':
                 if self.attrs[attr.attr_id] in self.gdx_variables.keys():
                     metadata = {}
                     gdxvar = self.gdx_variables[self.attrs[attr.attr_id]]
-                    dataset = dict(name=gdxvar.name, )
-                    if (gdxvar.name in self.gams_units):
-                        dataset['unit'] = self.gams_units[gdxvar.name]
-                    else:
-                        dataset['unit'] = '-'
+                    dataset = dict(name=gdxvar.name, unit_id=None, locked='N')
+                    # if (gdxvar.name in self.gams_units):
+                    #     dataset['unit'] = self.gams_units[gdxvar.name]
+                    # else:
+                    #     dataset['unit'] = '-'
 
                     if gdxvar.name in self.gdx_ts_vars.keys():
                         dataset['type'] = 'timeseries'
                         index = []
-                        count = 0;
+                        count = 0
                         for idx in gdxvar.index:
-                            if len(idx) is 1:
+                            if len(idx) == 1:
                                 index.append(idx[self.gdx_ts_vars[gdxvar.name]])
-                            elif len(idx) is 3:
+                            elif len(idx) == 3:
                                 index.append('.'.join(map(str, idx)))
                         data = gdxvar.data
                         dataset['value'] = self.create_timeseries(index, data)
@@ -751,7 +747,7 @@ class GAMSImporter:
                         dataset['value']=dataset['value']
                         if gdxvar.var_domain != None:
                             metadata['domain'] = gdxvar.domain
-                        dataset['metadata'] = metadata
+                        dataset['metadata'] = json.dumps(metadata)
                         dataset['dimension'] = attr.resourcescenario.value.dimension
                         res_scen = dict(resource_attr_id=attr.id,
                                         attr_id=attr.attr_id,
@@ -766,21 +762,21 @@ class GAMSImporter:
                     if self.attrs[attr.attr_id] in self.gdx_variables.keys():
                         metadata = {}
                         gdxvar = self.gdx_variables[self.attrs[attr.attr_id]]
-                        dataset = dict(name=gdxvar.name)
+                        dataset = dict(name=gdxvar.name, unit_id=None, locked='N')
 
-                        if (gdxvar.name in self.gams_units):
-                            dataset['unit'] = self.gams_units[gdxvar.name]
-                        else:
-                            dataset['unit'] = '-'
+                        # if (gdxvar.name in self.gams_units):
+                        #     dataset['unit'] = self.gams_units[gdxvar.name]
+                        # else:
+                        #     dataset['unit'] = '-'
                         if gdxvar.name in self.gdx_ts_vars.keys():
                             dataset['type'] = 'timeseries'
                             index = []
                             data = []
                             for i, idx in enumerate(gdxvar.index):
                                 if node.name in idx:
-                                    if len(idx) is 4:
+                                    if len(idx) == 4:
                                         index.append('.'.join(map(str, idx[1:])))
-                                    elif len(idx) is 2:
+                                    elif len(idx) == 2:
                                         index.append(idx[self.gdx_ts_vars[gdxvar.name]])
                                     data.append(gdxvar.data[i])
                             dataset['value'] = self.create_timeseries(index, data)
@@ -819,7 +815,7 @@ class GAMSImporter:
                             dataset['value'] = dataset['value']
                             if gdxvar.var_domain != None:
                                 metadata['domain'] = gdxvar.domain
-                            dataset['metadata'] = metadata
+                            dataset['metadata'] = json.dumps(metadata)
 
                             res_scen = dict(resource_attr_id=attr.id,
                                             attr_id=attr.attr_id,
@@ -835,12 +831,15 @@ class GAMSImporter:
                     if self.attrs[attr.attr_id] in self.gdx_variables.keys():
                         metadata = {}
                         gdxvar = self.gdx_variables[self.attrs[attr.attr_id]]
-                        dataset = dict(name=gdxvar.name,
-                                       locked='N')
-                        if (gdxvar.name in self.gams_units):
-                            dataset['unit'] = self.gams_units[gdxvar.name]
-                        else:
-                            dataset['unit'] = '-'
+                        dataset = dict(
+                            name=gdxvar.name,
+                            unit_id=None,
+                            locked='N'
+                        )
+                        # if (gdxvar.name in self.gams_units):
+                        #     dataset['unit'] = self.gams_units[gdxvar.name]
+                        # else:
+                        #     dataset['unit'] = '-'
                         if gdxvar.name in self.gdx_ts_vars.keys():
                             dataset['type'] = 'timeseries'
                             index = []
@@ -848,9 +847,9 @@ class GAMSImporter:
                             for i, idx in enumerate(gdxvar.index):
                                 if fromnode in idx and tonode in idx and \
                                                 idx.index(fromnode) < idx.index(tonode):
-                                    if len(idx) is 5:
+                                    if len(idx) == 5:
                                         index.append('.'.join(map(str, idx[2:])))
-                                    elif len(idx) is 3:
+                                    elif len(idx) == 3:
                                         index.append(idx[self.gdx_ts_vars[gdxvar.name]])
                                     data.append(gdxvar.data[i])
                             dataset['value'] = self.create_timeseries(index, data)
@@ -909,7 +908,7 @@ class GAMSImporter:
                             dataset['value'] = dataset['value']
                             if gdxvar.var_domain != None:
                                 metadata['domain'] = gdxvar.domain
-                            dataset['metadata'] = metadata
+                            dataset['metadata'] = json.dumps(metadata)
                             res_scen = dict(resource_attr_id=attr.id,
                                             attr_id=attr.attr_id,
                                             dataset=dataset)
@@ -920,6 +919,8 @@ class GAMSImporter:
     ########################################################################################
                             ################
     def create_dataframe_from_mga_results(self, idx, soln_, index, data, res):
+
+        data = [round(d, 3) for d in data]
         elements = {}
         for i in range(0, len(index)):
             if(index[i][0]==soln_):
@@ -984,6 +985,8 @@ class GAMSImporter:
     #######################################################################################
     def create_array(self, index, data, res):
 
+        data = [round(d, 3) for d in data]
+
         elements = {}
         for i in range(0, len(index)):
             if '_' in res and len(index[i]) == 4:
@@ -1024,6 +1027,8 @@ class GAMSImporter:
     def save(self):
         log.info("Saving")
         #first delete the old results
-        self.connection.delete_scenario_results(self.scenario_id)
+        # self.connection.delete_scenario_results(self.scenario_id)
         #Make this empty to avoid potential updates, and to save on work in Hydra
-        self.connection.update_resourcedata(self.scenario_id, self.res_scenarios)
+        self.connection.update_resourcedata(
+            scenario_id=int(self.scenario_id),
+            resource_scenarios=self.res_scenarios)

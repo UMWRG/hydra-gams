@@ -6,7 +6,6 @@ import shutil
 import logging
 
 from hydra_client.resources import HydraResource, HydraNetwork
-from hydra_base.exceptions import HydraPluginError
 
 log = logging.getLogger(__name__)
 
@@ -27,20 +26,21 @@ class GamsModel(object):
         log.info("Using GAMS Path: %s", gamspath)
         self.lst_name = '_gams_py_gjo0.lst'
         try:
+            import gams
             real_path = os.path.realpath(os.path.abspath(gamspath))
-            api_path = os.path.join(real_path,'apifiles','Python','api'+python_version_prefix)
+            #api_path = os.path.join(real_path,'apifiles','Python','api'+python_version_prefix)
+            api_path = os.path.join(real_path)
             if api_path not in sys.path:
                 sys.path.insert(0, api_path)
-            from gams import  workspace
             if turn_debug_on == True:
                 debug_level = 3
             else:
                 debug_level = 1
-            self.ws = workspace.GamsWorkspace(working_directory=working_directory, system_directory=gamspath, debug = debug_level)
+            self.ws = gams.GamsWorkspace(working_directory=working_directory, system_directory=gamspath, debug = debug_level)
 
         except Exception as e:
             log.exception(e)
-            raise HydraPluginError("Unable to import modules from gams. Please ensure that gams with version greater than 24.1 is installed.")
+            raise Exception("Unable to import modules from gams.")
 
     def add_job(self, model_file):
        """
@@ -153,22 +153,22 @@ class GamsModel(object):
         run the GAMS model
         and raise an error if something going wrong
         '''
-        from gams import  workspace
         lst_location = os.path.join(self.working_directory, self.lst_name)
         try:
+            import gams
             self.job.run(checkpoint=self.cp)#, gams_options=options.ESol#print)
             if os.path.exists(lst_location):
                 shutil.copyfile(lst_location, os.path.join(self.data_dir, self.lst_name))
-        except workspace.GamsExceptionExecution as e:
+        except gams.GamsExceptionExecution as e:
             if os.path.exists(lst_location):
                 shutil.copyfile(lst_location, os.path.join(self.data_dir, self.lst_name))
 
             if e.rc == 3:
-                raise HydraPluginError("An exception occurred when executing the model. This is most likely caused by infeasibility.")
+                raise Exception("An exception occurred when executing the model. This is most likely caused by infeasibility.")
             elif e.rc == 2:
-                raise HydraPluginError("There was a compilation error with the model. Please check the native output file for more details.")
+                raise Exception("There was a compilation error with the model. Please check the native output file for more details.")
             else:
-                raise HydraPluginError("An unknown has occurred running the model. Please check the native output file for more details.")
+                raise Exception("An unknown has occurred running the model. Please check the native output file for more details.")
 
         if self.model_name is not None:
             try:
@@ -184,7 +184,7 @@ class GamsModel(object):
             modelerror=self.check_model_status(status)
             solvererror=self.check_solver_status(s_status)
             if(modelerror is not None or solvererror is not None):
-                raise HydraPluginError("Model error: "+str(modelerror)+"\nSolver error: "+str(solvererror))
+                raise Exception("Model error: "+str(modelerror)+"\nSolver error: "+str(solvererror))
 
 
 class GAMSnetwork(HydraNetwork):
@@ -258,7 +258,7 @@ def import_gms_data(filename):
     Read whole .gms file and expand all $ include statements found.
     """
     if os.path.isfile(os.path.expanduser(filename))==False:
-        raise HydraPluginError('Gams file '+filename+' not found.')
+        raise Exception('Gams file '+filename+' not found.')
 
     basepath = os.path.dirname(filename)
 
@@ -315,7 +315,7 @@ def check_gams_installation():
         log.info("api_path: "+ api_path)
 
     except Exception as e:
-        raise HydraPluginError("Unable to import modules from gams. Please ensure that gams with version greater than 24.1 is installed.")
+        raise Exception("Unable to import modules from gams. Please ensure that gams with version greater than 24.1 is installed.")
 
 def get_gams_path():
     """
@@ -342,7 +342,7 @@ def get_gams_path():
                     gams_versions.sort()
                     if len(gams_versions) > 0:
                         if float(gams_versions[-1]) < 24.1:
-                                raise HydraPluginError("Only GAMS versions of 24.1 and above are supported automatically."
+                                raise Exception("Only GAMS versions of 24.1 and above are supported automatically."
                                             " Please download the newest GAMS from (http://www.gams.com/download/) or "
                                             " specify the folder containing gams API using --gams-path")
                         else:
@@ -370,7 +370,7 @@ def get_gams_path():
         if gams_path is not None:
             return gams_path
         else:
-            raise HydraPluginError("Unable to find GAMS installation. Please specify folder containing gams executable.")
+            raise Exception("Unable to find GAMS installation. Please specify folder containing gams executable.")
     else:
         return gams_path
 

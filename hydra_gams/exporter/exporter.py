@@ -4,7 +4,7 @@ import json
 import logging
 from decimal import Decimal
 from string import ascii_lowercase
-
+import io
 import pandas as pd
 
 from hydra_base.exceptions import HydraPluginError
@@ -100,6 +100,8 @@ class GAMSExporter:
         self.scenario_id = int(scenario_id)
         self.template_id = int(template_id) if template_id is not None else None
         self.type_attr_default_datasets = {}
+        self.attr_id_map = {}
+
         ##default datasets, keyed on attribute name
         self.attr_default_datasets = {}
         self.filename = output
@@ -124,7 +126,7 @@ class GAMSExporter:
         self.direct_outputs = []
 
         self.descriptors = {}
-        self.hashtables_keys={}
+        self.dataframes_keys={}
         self.output=''
         self.added_pars=[]
         self.junc_node={}
@@ -156,12 +158,6 @@ class GAMSExporter:
             self.links_as_name = False
 
 
-        self.attrs = self.connection.get_attributes()
-        self.attr_id_map = {}
-        for a in self.attrs:
-            self.attr_id_map[a.id] = a
-        log.info("%s attributes retrieved", len(self.attrs))
-
     def write_progress(self, step=None):
         """
             Utility function which automatically increments the current 'step'
@@ -175,6 +171,17 @@ class GAMSExporter:
         else:
             write_progress(step, self.steps)
 
+
+    def get_attributes(self):
+        self.attrs = self.connection.get_attributes(project_id=self.hydranetwork.project_id,
+                                                    network_id=self.hydranetwork.id,
+                                                    include_hierarchy=True,
+                                                    include_global=True)
+
+        for a in self.attrs:
+            self.attr_id_map[a.id] = a
+        log.info("%s attributes retrieved", len(self.attrs))
+
     def export(self):
         """
             Export a network to a GAMS text input file.
@@ -183,9 +190,9 @@ class GAMSExporter:
         log.info("Exporting Network")
         self.write_progress()
 
-        scenario_summary = self.connection.get_scenario(self.scenario_id, include_data=False)
+        scenario = self.connection.get_scenario(scenario_id=self.scenario_id, include_data=False)
 
-        self.network_id=scenario_summary.network_id
+        self.network_id = scenario.network_id
 
         self.get_network()
 
@@ -215,6 +222,7 @@ class GAMSExporter:
 
         net = self.connection.get_network(network_id=self.network_id,
                                           include_data=True,
+                                          include_attributes=True,
                                           include_results=False,
                                           template_id=self.template_id,
                                           scenario_ids=[self.scenario_id],
@@ -223,15 +231,16 @@ class GAMSExporter:
         self.hydranetwork=net
         log.info("Network retrieved")
 
+        self.get_attributes()
+
         self.template_id = net.types[0].template_id
-        self.template = self.connection.get_template(net.types[0].template_id)
+        self.template = self.connection.get_template(template_id=net.types[0].template_id)
 
         for t_type in self.template.templatetypes:
             self.type_attr_default_datasets[t_type.id] = {}
             for typeattr in t_type.typeattrs:
-                attr_name = self.attr_id_map[typeattr.attr_id].name
                 if typeattr.default_dataset is not None:
-                    self.type_attr_default_datasets[t_type.id][attr_name] = typeattr.default_dataset
+                    self.type_attr_default_datasets[t_type.id] = typeattr.default_dataset
                     self.attr_default_datasets[typeattr.attr_id] = typeattr.default_dataset
 
         for templatetype in self.template.templatetypes:
@@ -251,10 +260,11 @@ class GAMSExporter:
                 if s.id == self.scenario_id:
                     self.scenario=s
 
-        self.resourcescenarios_ids=get_resourcescenarios_ids(net.scenarios[0].resourcescenarios)
+        self.resourcescenarios_ids={rs.resource_attr_id:rs for rs in net.scenarios[0].resourcescenarios}
 
         self.network = GAMSnetwork()
         log.info("Loading net into gams network.")
+
         self.network.load(net, self.attrs)
         if (self.time_axis == None):
             s = net.scenarios[0]
@@ -273,6 +283,7 @@ class GAMSExporter:
         self.get_link_codes()
 
         self.get_junc_link()
+
         if (len(self.junc_node) > 0):
             self.use_jun = True
         else:
@@ -364,17 +375,17 @@ class GAMSExporter:
         #that are not in the network
         self.set_empty_groups(node_groups, link_groups, subgroup_groups)
 
-        log.info("Creating connectivity matrix")
+        # log.info("Creating connectivity matrix")
         #self.create_connectivity_matrix()
-        log.info("Writing nodes coordinates")
+        # log.info("Writing nodes coordinates")
         #self.export_resources_coordinates()
-        log.info("Matrix created")
+        # log.info("Matrix created")
 
     def get_longest_node_link_name(self):
         node_name_len=0
         for node in self.network.nodes:
-            if len(node.name)>node_name_len:
-                node_name_len=len(node.name)
+            if len(self.get_name(node))>node_name_len:
+                node_name_len=len(self.get_name(node))
 
         self.name_len=str(node_name_len*2+5)
         self.array_len=str(node_name_len*2+15)
@@ -384,7 +395,7 @@ class GAMSExporter:
         # Write all nodes ...
         self.sets += 'i vector of all nodes /\n'
         for node in self.network.nodes:
-            self.sets += node.name + '\n'
+            self.sets += self.get_name(node) + '\n'
         self.sets += '    /\n\n'
         # ... and create an alias for the index i called j:
         self.sets += 'Alias(i,j)\n\n'
@@ -400,7 +411,7 @@ class GAMSExporter:
         for object_type in self.node_types:
             self.sets += object_type.name + '(i) /\n'
             for node in self.network.get_node(node_type_id=object_type.id):
-                self.sets += node.name + '\n'
+                self.sets += self.get_name(node) + '\n'
             self.sets += '/\n\n'
 
     def export_node_groups(self):
@@ -423,7 +434,7 @@ class GAMSExporter:
                 grp_str = ''
                 grp_str += group.name + '(i) /\n'
                 for node in group_nodes:
-                    grp_str += node.name + '\n'
+                    grp_str += self.get_name(node) + '\n'
                 grp_str += '/\n\n'
                 group_strings.append(grp_str)
 
@@ -437,7 +448,6 @@ class GAMSExporter:
                 self.sets += grp_str
 
         return node_groups
-
 
     def get_junc_link(self):
         for link in self.network.links:
@@ -453,13 +463,16 @@ class GAMSExporter:
                     continue
             self.link_code[link.name]=res.value
 
+    def get_name(self, link):
+        return link.name[:63]
+
     def export_links(self):
         self.sets += 'SETS\n\n'
         # Write all links ...
         if self.links_as_name:
             self.sets += 'link_name /\n'
             for link in self.network.links:
-                self.sets +=link.name+'\n'
+                self.sets +=self.get_name(link)+'\n'
             self.sets += '/\n\n'
             self.sets += 'links (link_name) vector of all links /\n'
         else:
@@ -469,7 +482,7 @@ class GAMSExporter:
                 self.sets += 'links(i,j) vector of all links /\n'
         for link in self.network.links:
             if self.links_as_name:
-                self.sets += link.name +'\n'
+                self.sets += self.get_name(link) +'\n'
             else:
                 if(self.use_jun==True):
                     jun=self.junc_node[link.name]
@@ -495,7 +508,7 @@ class GAMSExporter:
                     self.sets += '(i,j) /\n'
             for link in self.network.get_link(link_type_id=object_type.id):
                 if self.links_as_name:
-                    self.sets += link.name + '\n'
+                    self.sets += self.get_name(link) + '\n'
                 else:
                     if self.use_jun == True:
                         jun = self.junc_node[link.name]
@@ -544,7 +557,7 @@ class GAMSExporter:
                         lstring += '(i,j) /\n'
                 for link in group_links:
                     if self.links_as_name:
-                        lstring += link.name + '\n'
+                        lstring += self.get_name(link) + '\n'
                     else:
                         if self.use_jun == True:
                             jun = self.junc_node[link.name]
@@ -582,6 +595,9 @@ class GAMSExporter:
 
         for group in self.network.groups:
             group_subgroups=self.network.get_group(group=group.ID)
+            if group.name == 'EXCLUSIVITY_1':
+                log.info(group.ID)
+                log.info(f"********{group_subgroups}********")
             if len(group_subgroups) > 0:
                 #THis is a subgroup, so add to the list of subgroups for use when
                 #exporting the node / link groups in case they are treated differently
@@ -713,7 +729,7 @@ class GAMSExporter:
         #Go through all group types and add empty sets for all those that don't
         #have a group set in the data
         for grouptype in self.group_types:
-            self.group_dimensions[grouptype.name] = self.type_attr_default_datasets[grouptype.id].get('dimensions', {'value':1})['value']
+            self.group_dimensions[grouptype.name] = self.type_attr_default_datasets[grouptype.id].get('value', 1)
 
             if grouptype.name not in non_empty_group_types and grouptype.name not in group_names:
                 self.empty_groups.append(grouptype)
@@ -724,7 +740,7 @@ class GAMSExporter:
         self.output += '* Connectivity matrix.\n'
         self.output += 'Table Connect(i,j)\n'
         self.output +=ff.format('')
-        node_names = [node.name for node in self.network.nodes]
+        node_names = [self.get_name(node) for node in self.network.nodes]
         for name in node_names:
             self.output += ff.format( name)
         self.output += '\n'
@@ -751,14 +767,14 @@ class GAMSExporter:
         self.output += ('\nParameter x_coord (i)/\n')
 
         for node in self.network.nodes:
-            self.output += (ff.format(node.name))
+            self.output += (ff.format(self.get_name(node)))
             x_coord = Decimal(node.X).quantize(threeplaces)
             self.output += (ff.format(x_coord))
             self.output += ('\n')
 
         self.output += ('/;\n\nParameter y_coord (i)/\n')
         for node in self.network.nodes:
-            self.output += (ff.format(node.name))
+            self.output += (ff.format(self.get_name(node)))
             y_coord = Decimal(node.Y).quantize(threeplaces)
             self.output += (ff.format(y_coord))
             self.output += ('\n')
@@ -777,7 +793,7 @@ class GAMSExporter:
             data.extend(self.export_parameters_using_type(nodes, type_name, 'descriptor'))
             data.extend(self.export_timeseries_using_type(nodes, type_name))
             # data.extend(self.export_arrays(nodes))
-            data.extend(self.export_hashtable(nodes))
+            data.extend(self.export_dataframe(nodes))
 
         # Export link data for each node type
         data.append('* Link data\n\n')
@@ -789,7 +805,7 @@ class GAMSExporter:
             data.extend(self.export_parameters_using_type(links, type_name,'descriptor', res_type='LINK'))
             data.extend(self.export_timeseries_using_type(links, type_name, res_type='LINK'))
             #self.export_arrays(links)
-            data.extend(self.export_hashtable(links))
+            data.extend(self.export_dataframe(links))
         self.output = "%s%s"%(self.output, ''.join(data))
         log.info("Data exported")
 
@@ -802,7 +818,7 @@ class GAMSExporter:
         data = ['\n* Network data\n']
         data.extend(self.export_parameters_using_attributes([self.network],'scalar',res_type='NETWORK'))
         self.export_descriptor_parameters_using_attributes([self.network])
-        data.extend(self.export_hashtable([self.network],res_type='NETWORK'))
+        data.extend(self.export_dataframe([self.network],res_type='NETWORK'))
 
         data.append('\n\n\n* Nodes data\n')
         data.extend(self.export_parameters_using_attributes(self.network.nodes,'scalar'))
@@ -810,7 +826,7 @@ class GAMSExporter:
         #data.extend(self.export_parameters_using_attributes (self.network.nodes,'descriptor'))
         data.extend(self.export_timeseries_using_attributes (self.network.nodes))
         #data.extend(self.export_arrays(self.network.nodes)) #?????
-        data.extend(self.export_hashtable(self.network.nodes))
+        data.extend(self.export_dataframe(self.network.nodes))
 
         # Export link data for each node
         data.append('\n\n\n* Links data\n')
@@ -820,7 +836,7 @@ class GAMSExporter:
         #data.extend(self.export_parameters_using_attributes (self.network.links, 'descriptor', res_type='LINK'))
         data.extend(self.export_timeseries_using_attributes (self.network.links, res_type='LINK'))
         self.export_arrays(self.network.links) #??????
-        data.extend(self.export_hashtable(self.network.links, res_type = 'LINK'))
+        data.extend(self.export_dataframe(self.network.links, res_type = 'LINK'))
 
         data.append('\n\n\n* Default data\n')
         data.extend(self.export_default_values())
@@ -1183,7 +1199,6 @@ class GAMSExporter:
         for attribute in attributes:
             if(self.time_axis is None):
                 raise HydraPluginError("Missing time axis or start date, end date and time step or bad format")
-
             attr_outputs.append('\n*'+attribute.name)
 
             if islink:
@@ -1337,8 +1352,8 @@ class GAMSExporter:
         return key
 
 
-    def export_hashtable(self, resources,res_type=None):
-        """Export hashtable which includes seasonal data .
+    def export_dataframe(self, resources,res_type=None):
+        """Export dataframe which includes seasonal data .
                     """
         islink = res_type == 'LINK'
         attributes = []
@@ -1348,7 +1363,7 @@ class GAMSExporter:
         ids={}
         ids_key={}
         data_types={}
-        sets_namess={}
+        set_names={}
         # Identify all the timeseries attributes and unique attribute
         # names
         for resource in resources:
@@ -1360,32 +1375,31 @@ class GAMSExporter:
                     ids[attr.name][resource] = self.resourcescenarios_ids[attr.resource_attr_id]
 
                     if attr.name not in data_types:
-                        metadata = self.resourcescenarios_ids[attr.resource_attr_id].value.metadata
-                        log.debug(metadata)
+                        metadata = self.resourcescenarios_ids[attr.resource_attr_id].dataset.metadata
                         if "type" in metadata:
                             data_types[attr.name]=metadata["type"].lower()
                         else:
-                            data_types[attr.name]=self.resourcescenarios_ids[attr.resource_attr_id].type
+                            data_types[attr.name]=self.resourcescenarios_ids[attr.resource_attr_id].dataset.type
                         if 'id' in metadata:
                             id_=metadata['id']
                              # "Found id and it -------------->", id_, attr.name
                             ids_key[attr.name]=id_
-                    if attr.name not in sets_namess:
+                    if attr.name not in set_names:
                         if "key" in metadata:
-                            sets_namess[attr.name] = metadata["key"].lower()
+                            set_names[attr.name] = metadata["key"].lower()
 
                     if "sub_key" in metadata:
-                        if attr.name+"_sub_key" not in sets_namess:
-                            sets_namess[attr.name+"_sub_key"] = metadata["sub_key"].lower()
+                        if attr.name+"_sub_key" not in set_names:
+                            set_names[attr.name+"_sub_key"] = metadata["sub_key"].lower()
 
         for attribute_name in ids.keys():
-            attr_outputs.append('\n\n\n*' + attribute_name)
+            attr_outputs.append('\n\n\n*dataframe:' + attribute_name)
             ff = '{0:<' + self.array_len + '}'
             t_ = ff.format('')
             counter=0
             type_= data_types[attribute_name]
-            if attribute_name in sets_namess:
-                set_name=sets_namess[attribute_name]
+            if attribute_name in set_names:
+                set_name=set_names[attribute_name]
             else:
                 set_name=attribute_name+"_index"
             if(type_ == "dataframe"):
@@ -1393,12 +1407,12 @@ class GAMSExporter:
                     add=resource.name+"_"+attribute_name
                     if add in self.added_pars:
                         continue
-                    df = pd.read_json(rs.dataset.value)
-                    if (set_name not in self.hashtables_keys):
-                        self.hashtables_keys[set_name]=self._get_index(df)
+                    df = pd.read_json(io.StringIO(rs.dataset.value))
+                    if (set_name not in self.dataframes_keys):
+                        self.dataframes_keys[set_name]=self._get_index(df)
                     else:
-                        keys_=self.hashtables_keys[set_name]
-                        self.hashtables_keys[set_name]=self.compare_sets(self._get_index(df), keys_)
+                        keys_=self.dataframes_keys[set_name]
+                        self.dataframes_keys[set_name]=self.compare_sets(self._get_index(df), keys_)
 
                     for key in df.index:
                         t_ = t_ + ff.format(key)
@@ -1480,18 +1494,17 @@ class GAMSExporter:
                     if add in self.added_pars:
                         continue
 
-                    df = pd.read_json(rs.dataset.value)
+                    df = pd.read_json(io.StringIO(rs.dataset.value))
 
                     keys = df.index
+                    if set_name not in self.dataframes_keys:
+                        self.dataframes_keys[set_name] = keys
 
-                    if set_name not in self.hashtables_keys:
-                        self.hashtables_keys[set_name] = keys
-
-                    if attribute_name+"_sub_key" in sets_namess:
-                        sub_set_name = sets_namess[attribute_name+"_sub_key" ]
+                    if attribute_name+"_sub_key" in set_names:
+                        sub_set_name = set_names[attribute_name+"_sub_key" ]
                     else:
                         sub_set_name = attribute_name + "sub_set__index"
-
+                   
                     for key in df.columns:
                         t_ = t_ + ff.format(key)
 
@@ -1518,8 +1531,6 @@ class GAMSExporter:
                             attr_outputs.append('\n' + str(t_))
                     counter += 1
                     for key in df.index:
-                        orig_key = key
-                        key = str(key)
                         if islink == True:
                             if self.links_as_name:
                                 attr_outputs.append(
@@ -1540,15 +1551,15 @@ class GAMSExporter:
                         else:
                             attr_outputs.append('\n' + ff.format(key+'.'+resource.name))
 
-                        if sub_set_name not in self.hashtables_keys:
-                            self.hashtables_keys[sub_set_name] = df.columns
+                        if sub_set_name not in self.dataframes_keys:
+                            self.dataframes_keys[sub_set_name] = df.columns 
 
                         for col in df.columns:
                             if res_type != "NETWORK":
-                                data_str = ff.format(str((df[col][orig_key])))
+                                data_str = ff.format(str((df[col][key])))
                                 attr_outputs.append(data_str)
                             else:
-                                data_str = ff.format(keys[i]) + ff.format(str(float(df[col][orig_key])))
+                                data_str = ff.format(keys[i]) + ff.format(str(float(df[col][key])))
                                 attr_outputs.append(data_str + '\n')
 
             elif type_ == "nodes_array_collection" and res_type == "NETWORK":
@@ -1556,43 +1567,43 @@ class GAMSExporter:
                     value_ = json.loads(rs.dataset.value)
                     keys = value_
                     #this is where the EBSD 'yr' and 'counter' table gets created.
-                    attr_outputs.extend(self.get_resourcess_array_pars_collection(self.network.nodes, attribute_name, keys, set_name))
-                    if (set_name not in self.hashtables_keys):
-                        self.hashtables_keys[set_name] = keys
+                    attr_outputs.extend(self.get_resource_array_pars_collection(self.network.nodes, attribute_name, keys, set_name))
+                    if (set_name not in self.dataframes_keys):
+                        self.dataframes_keys[set_name] = keys
                     else:
-                        keys_ = self.hashtables_keys[set_name]
-                        self.hashtables_keys[set_name] = self.compare_sets(keys, keys_)
+                        keys_ = self.dataframes_keys[set_name]
+                        self.dataframes_keys[set_name] = self.compare_sets(keys, keys_)
 
             elif type_ == "links_array_collection" and res_type == "NETWORK":
                 for resource, rs in ids[attribute_name].items():
                     value_ = json.loads(rs.dataset.value)
                     keys = value_
-                    attr_outputs.extend(self.get_resourcess_array_pars_collection(self.network.links, attribute_name, keys, set_name, True))
-                    if (set_name not in self.hashtables_keys):
-                        self.hashtables_keys[set_name] = keys
+                    attr_outputs.extend(self.get_resource_array_pars_collection(self.network.links, attribute_name, keys, set_name, True))
+                    if (set_name not in self.dataframes_keys):
+                        self.dataframes_keys[set_name] = keys
                     else:
-                        keys_ = self.hashtables_keys[set_name]
-                        self.hashtables_keys[set_name] = self.compare_sets(keys, keys_)
+                        keys_ = self.dataframes_keys[set_name]
+                        self.dataframes_keys[set_name] = self.compare_sets(keys, keys_)
             elif type_ == "nodes_scalar_collection" and res_type == "NETWORK":
                 for resource, rs in ids[attribute_name].items():
                     value_ = json.loads(rs.dataset.value)
                     keys = value_
                     attr_outputs.extend(self.get_resourcess_scalar_pars_collection(self.network.nodes, attribute_name, keys, set_name))
-                    if (set_name not in self.hashtables_keys):
-                        self.hashtables_keys[set_name] = keys
+                    if (set_name not in self.dataframes_keys):
+                        self.dataframes_keys[set_name] = keys
                     else:
-                        keys_ = self.hashtables_keys[set_name]
-                        self.hashtables_keys[set_name] = self.compare_sets(keys, keys_)
+                        keys_ = self.dataframes_keys[set_name]
+                        self.dataframes_keys[set_name] = self.compare_sets(keys, keys_)
             elif type_ == "links_scalar_collection" and res_type == "NETWORK":
                 for resource, rs in ids[attribute_name].items():
                     value_ = json.loads(rs.dataset.value)
                     keys = value_
                     attr_outputs.extend(self.get_resourcess_scalar_pars_collection(self.network.links, attribute_name, keys, set_name, True))
-                    if (set_name not in self.hashtables_keys):
-                        self.hashtables_keys[set_name] = keys
+                    if (set_name not in self.dataframes_keys):
+                        self.dataframes_keys[set_name] = keys
                     else:
-                        keys_ = self.hashtables_keys[set_name]
-                        self.hashtables_keys[set_name] = self.compare_sets(keys, keys_)
+                        keys_ = self.dataframes_keys[set_name]
+                        self.dataframes_keys[set_name] = self.compare_sets(keys, keys_)
 
             elif type_ == "links_set_collection" and res_type == "NETWORK":
                 for resource, rs in ids[attribute_name].items():
@@ -1604,14 +1615,14 @@ class GAMSExporter:
                         id='default'
 
                     attr_outputs.extend(
-                        self.get_resourcess_set_collection(self.network.links, attribute_name, keys,id,
+                        self.get_resource_set_collection(self.network.links, attribute_name, keys,id,
                                                                    True))
             elif type_ == "set_collection" and res_type == "NETWORK":
                 for resource, rs in ids[attribute_name].items():
                     value_ = json.loads(rs.dataset.value)
                     keys = value_
-                    if attribute_name not in self.hashtables_keys:
-                        self.hashtables_keys[attribute_name]=keys
+                    if attribute_name not in self.dataframes_keys:
+                        self.dataframes_keys[attribute_name]=keys
 
 
             if res_type == "NETWORK":
@@ -1625,13 +1636,13 @@ class GAMSExporter:
                 return True
         return False
 
-    def get_resourcess_array_pars_collection(self, resources, attribute_name_, pars_collections, set_name_, islink=False):
+    def get_resource_array_pars_collection(self, resources, attribute_name_, pars_collections, set_name_, islink=False):
         attributes = []
         attr_names = []
         attr_outputs = []
         ids = {}
         data_types = {}
-        sets_namess = {}
+        set_names = {}
         # Identify all the timeseries attributes and unique attribute
         # names
         main_key=''
@@ -1645,30 +1656,31 @@ class GAMSExporter:
                     ids[attr.name][resource] = self.resourcescenarios_ids[attr.resource_attr_id]
 
                     if attr.name not in data_types:
-                        type_ = self.resourcescenarios_ids[attr.resource_attr_id].value.metadata
+                        type_ = self.resourcescenarios_ids[attr.resource_attr_id].dataset.metadata
                         if "type" in type_:
                             data_types[attr.name] = type_["type"].lower()
                         else:
-                            data_types[attr.name]=self.resourcescenarios_ids[attr.resource_attr_id].type
-                    if attr.name not in sets_namess:
+                            data_types[attr.name]=self.resourcescenarios_ids[attr.resource_attr_id].dataset.type
+                    if attr.name not in set_names:
                         if "key" in type_:
-                            sets_namess[attr.name] = type_["key"].lower()
+                            set_names[attr.name] = type_["key"].lower()
                             main_key= type_["key"].lower()
                     if "sub_key" in type_:
-                        if attr.name + "_sub_key" not in sets_namess:
-                            sets_namess[attr.name + "_sub_key"] = type_["sub_key"].lower()
+                        if attr.name + "_sub_key" not in set_names:
+                            set_names[attr.name + "_sub_key"] = type_["sub_key"].lower()
                             sub_key=type_["sub_key"].lower()
         if islink ==True:
             res_type='link'
         else:
             res_type='node'
         counter=0
+
         for attribute_name in ids.keys():
             attr_outputs.append('*' + attribute_name)
             ff = '{0:<' + self.array_len + '}'
             type_ = data_types[attribute_name]
-            if attribute_name in sets_namess:
-                set_name = sets_namess[attribute_name]
+            if attribute_name in set_names:
+                set_name = set_names[attribute_name]
             else:
                 set_name = attribute_name + "_index"
             if (type_ == "dataframe"):
@@ -1694,13 +1706,13 @@ class GAMSExporter:
                     if not add in self.added_pars:
                         self.added_pars.append(add)
 
-                    df = pd.read_json(rs.dataset.value)
+                    df = pd.read_json(io.StringIO(rs.dataset.value))
                     #setting the 'yr' and 'counter' here.
-                    if (set_name not in self.hashtables_keys):
-                        self.hashtables_keys[set_name] = self._get_index(df)
+                    if (set_name not in self.dataframes_keys):
+                        self.dataframes_keys[set_name] = self._get_index(df)
                     else:
-                        keys_ = self.hashtables_keys[set_name]
-                        self.hashtables_keys[set_name] = self.compare_sets(self._get_index(df), keys_)
+                        keys_ = self.dataframes_keys[set_name]
+                        self.dataframes_keys[set_name] = self.compare_sets(self._get_index(df), keys_)
 
                     for index in df.index:
                         for column in df.columns:
@@ -1740,10 +1752,10 @@ class GAMSExporter:
                     if not add in self.added_pars:
                         self.added_pars.append(add)
 
-                    df = pd.read_json(rs.dataset.value)
+                    df = pd.read_json(io.StringIO(rs.dataset.value))
 
-                    if set_name not in self.hashtables_keys:
-                        self.hashtables_keys[set_name] = self._get_index(df)
+                    if set_name not in self.dataframes_keys:
+                        self.dataframes_keys[set_name] = list(df.index)
 
                     for index in df.index:
                         for column in df.columns:
@@ -1776,7 +1788,7 @@ class GAMSExporter:
         attr_outputs = []
         ids = {}
         data_types = {}
-        sets_namess = {}
+        set_names = {}
         if islink == True:
             res_type = 'link'
         else:
@@ -1837,7 +1849,7 @@ class GAMSExporter:
 
 
     ###########################
-    def get_resourcess_set_collection(self, resources, set_title_, set_collections, id,
+    def get_resource_set_collection(self, resources, set_title_, set_collections, id,
                                       islink=False):
 
         attr_outputs = []
@@ -1917,10 +1929,7 @@ class GAMSExporter:
                         if tt==None:
                             break
                         if line:
-                            try:
-                                line=line+' . '+tt.value
-                            except:
-                                import pudb; pudb.set_trace()
+                            line=line+' . '+tt.value
                         else:
                             line =  tt.value
             if(line):
@@ -2149,9 +2158,9 @@ class GAMSExporter:
     def write_file(self):
         log.info("Writing file %s.", self.filename)
 
-        for key in self.hashtables_keys:
+        for key in self.dataframes_keys:
             self.sets += ('\n' + key + '\n/')
-            for val in self.hashtables_keys[key]:
+            for val in self.dataframes_keys[key]:
                 self.sets += ('\n' + str(val))
             self.sets += ('\n/\n\n')
 
@@ -2227,11 +2236,3 @@ def get_dict(obj):
             element = get_dict(obj.__dict__[key])
         result[key] = element
     return result
-
-def get_resourcescenarios_ids(resourcescenarios):
-    resourcescenarios_ids={}
-    for res in resourcescenarios:
-        ##print "==============================>", get_dict(res)
-        ##print type(res)
-        resourcescenarios_ids[res.resource_attr_id]=res
-    return resourcescenarios_ids

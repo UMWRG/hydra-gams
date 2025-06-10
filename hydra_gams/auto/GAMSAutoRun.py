@@ -234,5 +234,9 @@ def export_run_import(client,
     #print(text)
 
     if len(errors) > 0:
-        write_output(errors[0].message)
-        sys.exit(errors[0].message)
+        if hasattr(errors[0], 'message'):
+            write_output(errors[0].message)
+            sys.exit(errors[0].message)
+        else:
+            write_output(f"An error has occured:  {errors[0]}")
+            sys.exit(errors[0])
