@@ -7,7 +7,6 @@ from string import ascii_lowercase
 import io
 import pandas as pd
 
-from hydra_base.exceptions import HydraPluginError
 from hydra_base.util.hydra_dateutil import reindex_timeseries
 
 from hydra_client.output import write_progress, write_output, create_xml_response
@@ -50,7 +49,7 @@ def export_network(client,
                          gams_date_time_index=gams_date_time_index)
         e.export()
 
-    except HydraPluginError as e:
+    except Exception as e:
         write_progress(10, 10)
         log.exception(e)
         errors = [e]
@@ -1123,7 +1122,7 @@ class GAMSExporter:
                             all_data = None
 
                         if all_data is None:
-                            raise HydraPluginError("Error finding value attribute %s on"
+                            raise Exception("Error finding value attribute %s on"
                                                   "resource %s"%(attr.name, resource.name))
 
                         #Get each value in turn and add it to the line
@@ -1198,7 +1197,7 @@ class GAMSExporter:
 
         for attribute in attributes:
             if(self.time_axis is None):
-                raise HydraPluginError("Missing time axis or start date, end date and time step or bad format")
+                raise Exception("Missing time axis or start date, end date and time step or bad format")
             attr_outputs.append('\n*'+attribute.name)
 
             if islink:
@@ -1241,7 +1240,7 @@ class GAMSExporter:
                     all_data = None
 
                 if all_data is None:
-                    raise HydraPluginError("Error finding value attribute %s on"
+                    raise Exception("Error finding value attribute %s on"
                                           "resource %s"%(attr.name, resource.name))
                 if islink:
                     if self.links_as_name:
@@ -1504,7 +1503,7 @@ class GAMSExporter:
                         sub_set_name = set_names[attribute_name+"_sub_key" ]
                     else:
                         sub_set_name = attribute_name + "sub_set__index"
-                   
+
                     for key in df.columns:
                         t_ = t_ + ff.format(key)
 
@@ -1539,11 +1538,11 @@ class GAMSExporter:
 
                             else:
                                 if self.junc_node ==False:
-                                    attr_outputs.append('\n' + ff.format(key+'.'+resource.from_node + '.' + resource.to_node))
+                                    attr_outputs.append('\n' + ff.format(f"{key}.{resource.from_node}.{resource.to_node}"))
                                 else:
                                     jun = self.junc_node[resource.name]
                                     attr_outputs.append(
-                                        '\n' + ff.format(key + '.' + resource.from_node + '.' +jun+ '.' + resource.to_node))
+                                        '\n' + ff.format(f"{key}.{resource.from_node}.{jun}.{resource.to_node}"))
 
                         elif res_type == "NETWORK":
                             attr_outputs.append('\n' + ff.format(key) + '\n')
@@ -1552,7 +1551,7 @@ class GAMSExporter:
                             attr_outputs.append('\n' + ff.format(key+'.'+resource.name))
 
                         if sub_set_name not in self.dataframes_keys:
-                            self.dataframes_keys[sub_set_name] = df.columns 
+                            self.dataframes_keys[sub_set_name] = df.columns
 
                         for col in df.columns:
                             if res_type != "NETWORK":
@@ -2137,7 +2136,7 @@ class GAMSExporter:
             log.info("Time index written")
         except Exception as e:
             log.exception(e)
-            raise HydraPluginError("Please check time-axis or start time, end times and time step.")
+            raise Exception("Please check time-axis or start time, end times and time step.")
 
     def write_descriptors(self):
         log.info("Writing descriptor sets %s.", self.filename)

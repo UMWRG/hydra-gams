@@ -8,14 +8,11 @@ import copy
 from decimal import Decimal
 from operator import mul
 
-from hydra_base.exceptions import HydraPluginError
 from hydra_base.util.hydra_dateutil import ordinal_to_timestamp, date_to_string
 
 from hydra_gams.lib import import_gms_data
 
-from hydra_client.output import write_progress, write_output, create_xml_response
-
-from hydra_client.connection import JSONConnection
+from hydra_client.output import write_progress
 
 import logging
 log = logging.getLogger(__name__)
@@ -142,13 +139,7 @@ class GAMSImporter:
 
         self.gms_data = []
 
-        #There may be an open connection from the 'auto' app
-        if connection is None:
-            self.connection = JSONConnection(app_name="GAMS Importer", db_url=db_url)
-            self.connection.connect()
-            self.connection.login()
-        else:
-            self.connection = connection
+        self.connection = connection
 
         attrslist = self.connection.get_attributes()
         self.attrs = {attr.id:attr.name for attr in attrslist}
@@ -216,9 +207,6 @@ class GAMSImporter:
                 errors = [e]
 
         self.write_progress(self.steps)
-
-        text = create_xml_response('GAMSImport', self.network_id, [self.scenario_id],message=message, errors=errors)
-        print(text)
 
     def load_network(self, is_licensed=True):
         """

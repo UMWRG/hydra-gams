@@ -8,8 +8,6 @@ from pathlib import Path
 from shutil import copyfile
 from dateutil import parser
 
-import hydra_base
-from hydra_base.exceptions import HydraPluginError
 from hydra_client.output import write_progress, write_output, create_xml_response
 
 from hydra_gams.lib import GamsModel
@@ -35,7 +33,7 @@ def get_input_file_name(gams_model):
     '''
 
     if os.path.isfile(os.path.expanduser(gams_model)) is False:
-        raise HydraPluginError(f'Gams file {gams_model} not found.')
+        raise Exception(f'Gams file {gams_model} not found.')
 
     inputfilename = None
     gamsfile = open(gams_model, "r")
@@ -67,38 +65,17 @@ def get_input_file_name(gams_model):
     gamsfile.close()
 
     if inputfilename is None:
-        raise HydraPluginError('Unable to identify the name of the input '
+        raise Exception('Unable to identify the name of the input '
                                'file required by the model. '
                                'Please specify the name of the input filename.')
 
     inputfilepath = os.path.dirname(os.path.realpath(inputfilename))
     if os.path.exists(inputfilepath) is False:
-        raise HydraPluginError(f'Output file directory {inputfilepath} does not exist.')
+        raise Exception(f'Output file directory {inputfilepath} does not exist.')
 
     LOG.info("Exporting data to: %s", inputfilename)
 
     return inputfilename
-
-def register():
-    base_plugin_dir = os.path.expanduser(hydra_base.config.get('plugin', 'default_directory'))
-    gams_plugin_dir = os.path.join(base_plugin_dir, 'gams-app')
-    app_dir = Path(os.path.join(gams_plugin_dir, 'run'))
-
-    filename = 'plugin.xml'
-
-    if not app_dir.exists():
-        app_dir.mkdir(parents=True, exist_ok=True)
-
-    app_path = os.path.dirname(os.path.expanduser(__file__))
-    app_file = os.path.join(app_path, filename)
-
-    target_path = Path(app_dir, filename)
-
-    LOG.info("Copying from %s to %s", app_file, target_path)
-
-    copyfile(app_file, target_path)
-
-    LOG.info("GAMS Auto Run App Registered. ")
 
 def run_gams_model(gms_file, debug=False, data_dir='/tmp'):
     """
@@ -133,7 +110,7 @@ def run_gams_model(gms_file, debug=False, data_dir='/tmp'):
 
             gdx_file = gdx_list
             return gdx_file
-        raise HydraPluginError(f'Tried looking for {sol_pool} and {res} created '
+        raise Exception(f'Tried looking for {sol_pool} and {res} created '
                                'since the model was run, but was '
                                'unable to find them.')
     else:
@@ -143,7 +120,7 @@ def run_gams_model(gms_file, debug=False, data_dir='/tmp'):
             if delta >= 0:
                 gdx_file = os.path.join(working_directory, file_)
         if gdx_file is None:
-            raise HydraPluginError('Result file is not provided/found.')
+            raise Exception('Result file is not provided/found.')
 
         LOG.info("Results file: %s", gdx_file)
 
@@ -209,7 +186,7 @@ def export_run_import(client,
         message = "Run successfully"
         errors = []
 
-    except HydraPluginError as e:
+    except Exception as e:
         LOG.exception(e)
         errors = [e]
         message = "An error has occurred"
