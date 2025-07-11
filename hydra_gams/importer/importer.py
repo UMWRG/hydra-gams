@@ -8,7 +8,7 @@ import copy
 from decimal import Decimal
 from operator import mul
 
-from hydra_base.util.hydra_dateutil import ordinal_to_timestamp, date_to_string
+from hydra_gams.util import ordinal_to_timestamp, date_to_string
 
 from hydra_gams.lib import import_gms_data
 
@@ -1020,3 +1020,22 @@ class GAMSImporter:
         self.connection.update_resourcedata(
             scenario_id=int(self.scenario_id),
             resource_scenarios=self.res_scenarios)
+
+
+def date_to_string(date, seasonal=False):
+    """Convert a date to a standard string used by Hydra. The resulting string
+    looks like this::
+
+        '2013-10-03 00:49:17.568-0400'
+
+    Hydra also accepts seasonal time series (yearly recurring). If the flag
+    ``seasonal`` is set to ``True``, this function will generate a string
+    recognised by Hydra as seasonal time stamp.
+    """
+
+    seasonal_key = '9999'
+    if seasonal:
+        FORMAT = seasonal_key+'-%m-%dT%H:%M:%S.%f'
+    else:
+        FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
+    return date.strftime(FORMAT)

@@ -7,7 +7,7 @@ from string import ascii_lowercase
 import io
 import pandas as pd
 
-from hydra_base.util.hydra_dateutil import reindex_timeseries
+from hydra_gams.util import reindex_timeseries
 
 from hydra_client.output import write_progress, write_output, create_xml_response
 
