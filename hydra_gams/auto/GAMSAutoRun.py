@@ -8,7 +8,7 @@ from pathlib import Path
 from shutil import copyfile
 from dateutil import parser
 
-from hydra_client.output import write_progress, write_output, create_xml_response
+from hydra_client.output import write_progress, write_output
 
 from hydra_gams.lib import GamsModel
 from hydra_gams import GAMSExporter, GAMSImporter
@@ -201,14 +201,6 @@ def export_run_import(client,
         message = "An unknown error has occurred"
 
     write_progress(steps, steps)
-
-
-#    if len(errors) > 0:#
-        #raise Exception("An Error occurred running the Model. ")
-
-    #text = create_xml_response('GAMSAuto', exporter.network.id, [scenario_id], message=message, errors=errors)
-
-    #print(text)
 
     if len(errors) > 0:
         if hasattr(errors[0], 'message'):
