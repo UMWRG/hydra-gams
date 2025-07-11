@@ -14,6 +14,8 @@ from hydra_gams.lib import import_gms_data
 
 from hydra_client.output import write_progress
 
+from hydra_client.exception import HydraClientError
+
 import logging
 log = logging.getLogger(__name__)
 
@@ -41,7 +43,7 @@ def import_data(network_id,
 
 def get_gdx_files(filename):
     if filename is None:
-        raise HydraPluginError("gdx file not specified.")
+        raise HydraClientError("gdx file not specified.")
     from gams.core import gdx
 
     filename = os.path.abspath(filename)
@@ -52,7 +54,7 @@ def get_gdx_files(filename):
         gdx.gdxSystemInfo(gdx_handle)
 
     if x != 1:
-        raise HydraPluginError('GDX file could not be opened.')
+        raise HydraClientError('GDX file could not be opened.')
 
 class GDXvariable(object):
     def __init__(self):
@@ -114,7 +116,7 @@ class GAMSImporter:
         rc = gdx.gdxCreate(self.gdx_handle, gdx.GMS_SSSIZE)
         log.info("2 =============================>"+ str(rc))
         if rc[0] == 0:
-            raise HydraPluginError('Could not find GAMS installation.')
+            raise HydraClientError('Could not find GAMS installation.')
         self.symbol_count = 0
         self.element_count = 0
         self.gdx_variables = dict()
@@ -192,7 +194,7 @@ class GAMSImporter:
             self.save()
             self.write_progress()
 
-        except HydraPluginError as e:
+        except HydraClientError as e:
             log.exception(e)
             errors = [e]
             message = "An error has occurred"
@@ -232,7 +234,7 @@ class GAMSImporter:
         except (TypeError, ValueError):
             pass
         if scenario_id is None:
-            raise HydraPluginError("No scenario specified.")
+            raise HydraClientError("No scenario specified.")
 
 
         self.network = self.connection.get_network(network_id=int(self.network_id),
@@ -241,7 +243,7 @@ class GAMSImporter:
 
         if(is_licensed is False):
             if len(self.network.nodes)>20:
-                raise HydraPluginError("The licence is limited demo (maximum limits are 20 nodes and 20 times steps).  Please contact software vendor (hydraplatform1@gmail.com) to get a full licence")
+                raise HydraClientError("The licence is limited demo (maximum limits are 20 nodes and 20 times steps).  Please contact software vendor (hydraplatform1@gmail.com) to get a full licence")
 
     #####################################################
     def set_network(self,is_licensed,  network):
@@ -252,7 +254,7 @@ class GAMSImporter:
         self.network = network
         if(is_licensed is False):
             if len(self.network.nodes)>20:
-                raise HydraPluginError("The licence is limited demo (maximum limits are 20 nodes and 20 times steps).  Please contact software vendor (hydraplatform1@gmail.com) to get a full licence")
+                raise HydraClientError("The licence is limited demo (maximum limits are 20 nodes and 20 times steps).  Please contact software vendor (hydraplatform1@gmail.com) to get a full licence")
     #####################################################
     def get_mga_index(self, index_file_names):
         self.MGA_index=get_index(index_file_names)
@@ -287,7 +289,7 @@ class GAMSImporter:
             pass
 
         if self.gdx_file is None:
-            raise HydraPluginError("gdx file not specified.")
+            raise HydraClientError("gdx file not specified.")
 
         if type(self.gdx_file) is list:
             self.is_MGA=True
@@ -301,7 +303,7 @@ class GAMSImporter:
         x, self.symbol_count, self.element_count = \
             self.gdx.gdxSystemInfo(self.gdx_handle)
         if x != 1:
-            raise HydraPluginError('GDX file could not be opened.')
+            raise HydraClientError('GDX file could not be opened.')
         log.info('Importing %s symbols and %s elements.' %
                      (self.symbol_count, self.element_count))
 
@@ -335,7 +337,7 @@ class GAMSImporter:
         """Read in the .gms file.
         """
         if self.gms_file is None:
-            raise HydraPluginError(".gms file not specified.")
+            raise HydraClientError(".gms file not specified.")
 
         gms_file = os.path.abspath(self.gms_file)
 
@@ -408,7 +410,7 @@ class GAMSImporter:
 
         if(self.is_licensed is False):
             if len(self.time_axis)>20:
-                raise HydraPluginError("The licence is limited demo (maximum limits are 20 nodes and 20 times steps).  Please contact software vendor (hydraplatform1@gmail.com) to get a full licence")
+                raise HydraClientError("The licence is limited demo (maximum limits are 20 nodes and 20 times steps).  Please contact software vendor (hydraplatform1@gmail.com) to get a full licence")
 
     def parse_variables(self, variable):
         """For all variables stored in the gdx file, check if these are time

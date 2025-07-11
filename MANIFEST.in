@@ -1,3 +1,0 @@
-include hydra_gams/auto/plugin.xml
-include hydra_gams/exporter/plugin.xml
-include hydra_gams/importer/plugin.xml

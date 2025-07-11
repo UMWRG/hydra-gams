@@ -9,7 +9,7 @@ import pandas as pd
 
 from hydra_gams.util import reindex_timeseries
 
-from hydra_client.output import write_progress, write_output, create_xml_response
+from hydra_client.output import write_progress, write_output
 
 from hydra_gams.lib import GAMSnetwork, convert_date_to_timeindex
 
@@ -62,12 +62,6 @@ def export_network(client,
                 errors = [e]
         else:
             errors = [e]
-
-    text = create_xml_response('GAMSExport',
-                               e.hydranetwork.id,
-                              [scenario_id],
-                               errors = errors,
-                               message=message)
 
     return exporter
 

@@ -1,6 +1,6 @@
 # (c) Copyright 2013-2019 University of Manchester
 '''
- plugin_name: Import GAMS
+app_name: Import GAMS
 	          Import a gdx results file into Hydra.
 
 A Hydra plug-in to import results from a GAMS model run. All results need to
@@ -39,11 +39,11 @@ Option                 Short  Parameter  Description
 ====================== ====== ========== =========================================
 Option                 Short  Parameter  Description
 ====================== ====== ========== =========================================
---server_url           -u     SERVER_URL Url of the server the plugin will
+--server_url           -u     SERVER_URL Url of the server the app will
                                          connect to.
                                          Defaults to localhost.
 --session_id           -c     SESSION_ID Session ID used by the calling software
-                                         If left empty, the plugin will attempt
+                                         If left empty, the app will attempt
                                          to log in itself.
 
 **Manually specifying the gams path:**
