@@ -11,4 +11,4 @@ hydra-base = {git = "https://github.com/hydraplatform/hydra-base.git",ref = "mas
 hydra-client-python = {git = "https://github.com/hydraplatform/hydra-client-python.git",ref = "master"}
 
 [requires]
-python_version = "3.6"
+python_version = "3.12"

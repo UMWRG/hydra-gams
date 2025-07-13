@@ -1,7 +1,8 @@
 import click
 import logging
 from hydra_gams import exporter, importer, auto
-logger = logging.getLogger("gams")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 logger.propagate = 0 # stop the logger from logging twice
 
 from hydra_client.connection import RemoteJSONConnection
