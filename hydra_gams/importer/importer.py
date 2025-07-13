@@ -984,8 +984,8 @@ class GAMSImporter:
         #first delete the old results
         # self.connection.delete_scenario_results(self.scenario_id)
         #Make this empty to avoid potential updates, and to save on work in Hydra
-        self.connection.update_resourcedata(
-            scenario_id=int(self.scenario_id),
+        self.connection.bulk_update_resourcedata(
+            scenario_ids=[int(self.scenario_id)],
             resource_scenarios=self.res_scenarios)
 
 
