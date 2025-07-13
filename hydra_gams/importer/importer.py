@@ -22,21 +22,19 @@ log = logging.getLogger(__name__)
 gdx=None
 
 
-def import_data(network_id,
-                   scenario_id,
+def import_data(   scenario_id,
                    gms_file,
                    gdx_file,
-                   gams_path=None,
                    db_url=None,
                    connection=None):
 
     """
         Import results from a GDX file into a network
     """
+    print(gdx_file)
     gdximport = GAMSImporter(scenario_id,
                              gms_file,
                              gdx_file,
-#                             gams_path=gams_path,
                              db_url=db_url,
                              connection=connection)
     gdximport.import_data()
@@ -210,16 +208,12 @@ class GAMSImporter:
 
         self.write_progress(self.steps)
 
-    def load_network(self, is_licensed=True):
+    def load_network(self):
         """
          Load network and scenario from the server. If the network
          has been set externally (to save getting it again) then simply
          set this.res_scenario using the existing network
         """
-
-        # Use the network id specified by the user, if it is None, fall back to
-        # the network id read from the gms file
-        self.is_licensed = is_licensed
 
         if self.network:
             log.info("Not loading network as has been provided")
@@ -229,33 +223,8 @@ class GAMSImporter:
                                                         include_data='N')
         self.network_id=scenario_summary.network_id
 
-        try:
-            scenario_id = int(self.scenario_id)
-        except (TypeError, ValueError):
-            pass
-        if scenario_id is None:
-            raise HydraClientError("No scenario specified.")
+        self.network = self.connection.get_network(network_id=int(self.network_id))
 
-
-        self.network = self.connection.get_network(network_id=int(self.network_id),
-                                          template_id = self.template_id,
-                                          scenario_ids = [self.scenario_id])
-
-        if(is_licensed is False):
-            if len(self.network.nodes)>20:
-                raise HydraClientError("The licence is limited demo (maximum limits are 20 nodes and 20 times steps).  Please contact software vendor (hydraplatform1@gmail.com) to get a full licence")
-
-    #####################################################
-    def set_network(self,is_licensed,  network):
-        """
-           Load network and scenario from the server.
-        """
-        self.is_licensed = is_licensed
-        self.network = network
-        if(is_licensed is False):
-            if len(self.network.nodes)>20:
-                raise HydraClientError("The licence is limited demo (maximum limits are 20 nodes and 20 times steps).  Please contact software vendor (hydraplatform1@gmail.com) to get a full licence")
-    #####################################################
     def get_mga_index(self, index_file_names):
         self.MGA_index=get_index(index_file_names)
         '''
@@ -407,10 +376,6 @@ class GAMSImporter:
                self.time_axis.update({idx: timestamp})
                i += 1
                line = self.gms_data[i]
-
-        if(self.is_licensed is False):
-            if len(self.time_axis)>20:
-                raise HydraClientError("The licence is limited demo (maximum limits are 20 nodes and 20 times steps).  Please contact software vendor (hydraplatform1@gmail.com) to get a full licence")
 
     def parse_variables(self, variable):
         """For all variables stored in the gdx file, check if these are time
