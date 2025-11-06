@@ -809,6 +809,7 @@ class GAMSExporter:
 
         self.time_table={}
         data = ['\n* Network data\n']
+
         data.extend(self.export_parameters_using_attributes([self.network],'scalar',res_type='NETWORK'))
         self.export_descriptor_parameters_using_attributes([self.network])
         data.extend(self.export_dataframe([self.network],res_type='NETWORK'))
@@ -936,7 +937,7 @@ class GAMSExporter:
         attr_outputs = []
         for resource in resources:
             for attr in resource.attributes:
-                if attr.dataset_type == datatype and attr.is_var is False:
+                if attr.dataset_type.lower() == datatype.lower() and attr.is_var is False:
                     translated_attr_name = translate_attr_name(attr.name)
                     res = resource.get_attribute(attr_name=attr.name)
                     attr.name = translated_attr_name
